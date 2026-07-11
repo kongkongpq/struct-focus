@@ -1,0 +1,12 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "packages/context/src/index.ts"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "name": "Struct Context API",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "readme": "README.md"
+}
