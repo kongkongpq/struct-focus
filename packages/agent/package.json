@@ -1,0 +1,28 @@
+{
+  "name": "struct-agent",
+  "version": "0.1.0",
+  "description": "Struct Bridge 参考实现 - 核心循环/Electron预留/CLI",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run --project agent",
+    "start": "node dist/cli.js",
+    "clean": "rimraf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@struct/framework": "workspace:*",
+    "@struct/memory": "workspace:*",
+    "@struct/harness": "workspace:*",
+    "@struct/context": "workspace:*"
+  },
+  "license": "MIT"
+}

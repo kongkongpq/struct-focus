@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "resolveJsonModule": true,
+    "paths": {
+      "@struct/framework": ["./packages/framework/src/index.ts"],
+      "@struct/framework/*": ["./packages/framework/src/*"],
+      "@struct/memory": ["./packages/memory/src/index.ts"],
+      "@struct/memory/*": ["./packages/memory/src/*"],
+      "@struct/harness": ["./packages/harness/src/index.ts"],
+      "@struct/harness/*": ["./packages/harness/src/*"],
+      "@struct/context": ["./packages/context/src/index.ts"],
+      "@struct/context/*": ["./packages/context/src/*"],
+      "struct-agent": ["./packages/agent/src/index.ts"],
+      "struct-agent/*": ["./packages/agent/src/*"]
+    }
+  }
+}
