@@ -1,0 +1,64 @@
+﻿appId: com.struct-agent.app
+productName: Struct Agent
+copyright: Copyright © 2026
+
+directories:
+  output: dist-electron
+  buildResources: build
+
+# 仅打包编译产物；node_modules 由 pnpm 依赖树自动收集，排除无关项
+files:
+  - dist/**/*
+  - "!**/*.ts"
+  - "!**/*.map"
+
+# 跳过未使用的依赖，减小体积
+asar: true
+
+# 自定义图标：将 build/icon.png(512x512) / icon.ico / icon.icns 放入 build/ 目录即可生效；
+# 未提供时 electron-builder 使用默认图标（不影响打包）。
+icon: build/icon
+
+# ── Windows ──
+win:
+  target:
+    - nsis
+    - portable
+  artifactName: StructAgent-${version}-win-${arch}.${ext}
+
+nsis:
+  artifactName: StructAgent-Setup-${version}.${ext}
+  shortcutName: Struct Agent
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+
+portable:
+  artifactName: StructAgent-${version}-portable.exe
+
+# ── macOS ──
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.developer-tools
+  artifactName: StructAgent-${version}-mac-${arch}.${ext}
+
+dmg:
+  artifactName: StructAgent-${version}.dmg
+
+# ── Linux ──
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+  artifactName: StructAgent-${version}-linux-${arch}.${ext}
+
+# ── 自动更新发布（electron-updater + GitHub Releases）──
+# CI 中需设置 GH_TOKEN（拥有 repo 写权限）以推送 Release 与产物。
+publish:
+  - provider: github
+    owner: struct-agent
+    repo: struct-agent
+    releaseType: release

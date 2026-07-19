@@ -1,0 +1,330 @@
+# LoCoMo Baseline — DeepSeek V3
+**Date**: 2026-07-18T12:02:00.890Z | **Model**: deepseek-chat (128K context)
+**Accuracy**: 40/150 (**26.7%**)
+
+## By Category
+- Cat 1 Single-hop: 20/57 (35%)
+- Cat 2 Temporal: 16/69 (23%)
+- Cat 3 Multi-hop: 3/22 (14%)
+- Cat 4 Open-domain: 1/2 (50%)
+
+## Per-Conversation
+### Convo 1 — Caroline & Melanie — 6/15 (40%)
+- **Q1** Cat2 Temp [✓]: When did Caroline go to the LGBTQ support group?
+  - Expected: 7 May 2023 | Got: 8 May, 2023
+- **Q2** Cat2 Temp [✗]: When did Melanie paint a sunrise?
+  - Expected: 2022 | Got: Melanie painted the lake sunrise last year (session_1).
+- **Q3** Cat3 Mult [✗]: What fields would Caroline be likely to pursue in her educaton?
+  - Expected: Psychology, counseling certification | Got: Counseling or mental health.
+- **Q4** Cat1 Sing [✓]: What did Caroline research?
+  - Expected: Adoption agencies | Got: Caroline researched adoption agencies.
+- **Q5** Cat1 Sing [✓]: What is Caroline's identity?
+  - Expected: Transgender woman | Got: Caroline is a transgender woman.
+- **Q6** Cat2 Temp [✓]: When did Melanie run a charity race?
+  - Expected: The sunday before 25 May 2023 | Got: Melanie ran a charity race last Saturday (from session_2 on 25 May, 2023).
+- **Q7** Cat2 Temp [✗]: When is Melanie planning on going camping?
+  - Expected: June 2023 | Got: Not mentioned.
+- **Q8** Cat1 Sing [✗]: What is Caroline's relationship status?
+  - Expected: Single | Got: Not mentioned.
+- **Q9** Cat2 Temp [✗]: When did Caroline give a speech at a school?
+  - Expected: The week before 9 June 2023 | Got: Not mentioned.
+- **Q10** Cat2 Temp [✗]: When did Caroline meet up with her friends, family, and mentors?
+  - Expected: The week before 9 June 2023 | Got: Not mentioned.
+- **Q11** Cat2 Temp [✓]: How long has Caroline had her current group of friends for?
+  - Expected: 4 years | Got: 4 years.
+- **Q12** Cat1 Sing [✓]: Where did Caroline move from 4 years ago?
+  - Expected: Sweden | Got: Sweden
+- **Q13** Cat2 Temp [✗]: How long ago was Caroline's 18th birthday?
+  - Expected: 10 years ago | Got: Not mentioned.
+- **Q14** Cat1 Sing [✗]: What career path has Caroline decided to persue?
+  - Expected: counseling or mental health for Transgender people | Got: Caroline has decided to pursue counseling or working in mental health.
+- **Q15** Cat3 Mult [✗]: Would Caroline still want to pursue counseling as a career if she hadn't received support growing up
+  - Expected: Likely no | Got: Not mentioned.
+
+### Convo 2 — Jon & Gina — 2/15 (13%)
+- **Q1** Cat2 Temp [✗]: When Jon has lost his job as a banker?
+  - Expected: 19 January, 2023 | Got: Not mentioned.
+- **Q2** Cat2 Temp [✗]: When Gina has lost her job at Door Dash?
+  - Expected: January, 2023 | Got: Not mentioned.
+- **Q3** Cat4 Open [✓]: How do Jon and Gina both like to destress?
+  - Expected: by dancing | Got: Both Jon and Gina like to destress by dancing.
+- **Q4** Cat1 Sing [✓]: What do Jon and Gina both have in common?
+  - Expected: They lost their jobs and decided to start their own business | Got: Jon and Gina both lost their jobs and started their own businesses. Jon started 
+- **Q5** Cat4 Open [✗]: Why did Jon decide to start his dance studio?
+  - Expected: He lost his job and decided to start his own business to sha | Got: Jon decided to start his dance studio because he is passionate about dancing and
+- **Q6** Cat1 Sing [✗]: What Jon thinks the ideal dance studio should look like?
+  - Expected: By the water, with natural light and Marley flooring | Got: Based on the conversation, Jon thinks the ideal dance studio should be by the wa
+- **Q7** Cat2 Temp [✗]: When is Jon's group performing at a festival?
+  - Expected: February, 2023 | Got: Not mentioned.
+- **Q8** Cat2 Temp [✗]: When did Gina launch an ad campaign for her store?
+  - Expected: 29 January, 2023 | Got: Not mentioned.
+- **Q9** Cat2 Temp [✗]: When was Jon in Paris?
+  - Expected: 28 January 2023 | Got: Not mentioned.
+- **Q10** Cat1 Sing [✗]: Which city have both Jean and John visited?
+  - Expected: Rome | Got: Not mentioned.
+- **Q11** Cat2 Temp [✗]: When did Gina team up with a local artist for some cool designs?
+  - Expected: February, 2023 | Got: Not mentioned.
+- **Q12** Cat2 Temp [✗]: When did Gina get her tattoo?
+  - Expected: A few years ago | Got: Not mentioned.
+- **Q13** Cat2 Temp [✗]: When did Jon start to go to the gym?
+  - Expected: March, 2023 | Got: Not mentioned.
+- **Q14** Cat2 Temp [✗]: When did Gina open her online clothing store?
+  - Expected: 16 March, 2023 | Got: Not mentioned.
+- **Q15** Cat2 Temp [✗]: When did Jon start expanding his studio's social media presence?
+  - Expected: April, 2023 | Got: Not mentioned.
+
+### Convo 3 — John & Maria — 2/15 (13%)
+- **Q1** Cat2 Temp [✗]: Who did Maria have dinner with on May 3, 2023?
+  - Expected: her mother | Got: Not mentioned.
+- **Q2** Cat2 Temp [✗]: When did Maria donate her car?
+  - Expected: 21 December 2022 | Got: Not mentioned.
+- **Q3** Cat1 Sing [✗]: What martial arts has John done?
+  - Expected: Kickboxing, Taekwondo | Got: Based on the conversation, John has done kickboxing and taekwondo.
+- **Q4** Cat1 Sing [✗]: What type of volunteering have John and Maria both done?
+  - Expected: Volunteering at a homeless shelter | Got: Based on the conversation, both John and Maria have volunteered at a homeless sh
+- **Q5** Cat2 Temp [✗]: When did John join the online support group?
+  - Expected: The week before 1 January 2023 | Got: Not mentioned.
+- **Q6** Cat2 Temp [✗]: When did Maria go to the beach?
+  - Expected: December 2022 | Got: Based on the conversation, Maria went to the beach last month (session_3, 8:30 p
+- **Q7** Cat1 Sing [✗]: Where has Maria made friends?
+  - Expected: homeless shelter, gym, church | Got: Based on the conversation, Maria made friends with a fellow volunteer at the hom
+- **Q8** Cat1 Sing [✗]: What items des John mention having as a child?
+  - Expected: A doll, a film camera | Got: Based on the conversation, John mentions having a "little doll" (session_5) and 
+- **Q9** Cat3 Mult [✗]: What might John's financial status be?
+  - Expected: Middle-class or wealthy | Got: Based solely on the conversation, John's financial status is not explicitly stat
+- **Q10** Cat1 Sing [✓]: Who gave Maria's family money when she was younger and her family was going through tough times?
+  - Expected: Her aunt | Got: Maria's aunt.
+- **Q11** Cat2 Temp [✗]: When did Maria meet Jean?
+  - Expected: February 24, 2023 | Got: Not mentioned.
+- **Q12** Cat1 Sing [✗]: What people has Maria met and helped while volunteering?
+  - Expected: David, Jean, Cindy, Laura | Got: Based solely on the conversation, Maria met and helped the following people whil
+- **Q13** Cat1 Sing [✓]: What test has John taken multiple times?
+  - Expected: The military aptitude test | Got: John has taken the military aptitude test multiple times. He mentions failing it
+- **Q14** Cat2 Temp [✗]: When did Maria's grandmother pass away?
+  - Expected: The week before 6 March 2023 | Got: Not mentioned.
+- **Q15** Cat3 Mult [✗]: Would John be considered a patriotic person?
+  - Expected: Yes | Got: Based solely on the conversation, John would be considered a patriotic person. H
+
+### Convo 4 — Joanna & Nate — 4/15 (27%)
+- **Q1** Cat3 Mult [✗]: Is it likely that Nate has friends besides Joanna?
+  - Expected: Yesteammates on hisvideo game team. | Got: Yes, it is likely. Nate mentions meeting new people at tournaments (session_2, s
+- **Q2** Cat1 Sing [✗]: What kind of interests do Joanna and Nate share?
+  - Expected: Watching movies, making desserts | Got: Based on the conversation, Joanna and Nate share interests in movies, dairy-free
+- **Q3** Cat2 Temp [✗]: When did Joanna first watch "Eternal Sunshine of the Spotless Mind?
+  - Expected: 2019 | Got: Not mentioned.
+- **Q4** Cat2 Temp [✓]: When did Nate win his first video game tournament?
+  - Expected: the week before 21Janury, 2022 | Got: Based on the conversation, Nate won his first video game tournament in the first
+- **Q5** Cat3 Mult [✗]: What pets wouldn't cause any discomfort to Joanna?
+  - Expected: Hairless cats or pigs,since they don't have fur, which is on | Got: Based on the conversation, Joanna is allergic to most reptiles and animals with 
+- **Q6** Cat1 Sing [✗]: What are Joanna's hobbies?
+  - Expected: Writing, watchingmovies, exploringnature, hanging withfriend | Got: Based on the conversation, Joanna's hobbies include writing, reading, watching m
+- **Q7** Cat2 Temp [✗]: How long has Nate had his first two turtles?
+  - Expected: three years | Got: Based on the conversation, Nate has had his first two turtles for 3 years.
+- **Q8** Cat2 Temp [✓]: When did Joanna finish her first screenplay?
+  - Expected: The Friday before 23January, 2022 | Got: Joanna finished her first screenplay on Friday, 21 January, 2022 (as mentioned i
+- **Q9** Cat2 Temp [✓]: When did Nate get his first two turtles?
+  - Expected: 2019 | Got: Based on the conversation, Nate got his first two turtles 3 years before session
+- **Q10** Cat2 Temp [✗]: What major achievement did Joanna accomplish in January 2022?
+  - Expected: finished her screenplay and printed it | Got: Based on the conversation, Joanna's major achievement in January 2022 was finish
+- **Q11** Cat1 Sing [✗]: What emotions is Joanna feeling about  the screenplay she submitted?
+  - Expected: Relief, excitement,worry, hope,anxiety. | Got: Based on the conversation, Joanna is feeling a mix of relief, excitement, and wo
+- **Q12** Cat1 Sing [✗]: What is Joanna allergic to?
+  - Expected: Most reptiles,animals with fur,cockroaches, dairy | Got: Based on the conversation, Joanna is allergic to most reptiles and animals with 
+- **Q13** Cat3 Mult [✗]: What underlying condition might Joanna have based on her allergies?
+  - Expected: asthma | Got: Not mentioned.
+- **Q14** Cat2 Temp [✗]: When did Joanna have an audition for a writing gig?
+  - Expected: 23 March, 2022. | Got: Not mentioned.
+- **Q15** Cat3 Mult [✓]: What nickname does Nate use for Joanna?
+  - Expected: Jo | Got: Nate uses the nickname "Jo" for Joanna.
+
+### Convo 5 — Tim & John — 2/15 (13%)
+- **Q1** Cat1 Sing [✓]: what are John's goals with regards to his basketball career?
+  - Expected: improve shooting percentage, win a championship | Got: Based on the conversation, John's goals for his basketball career are: winning a
+- **Q2** Cat1 Sing [✗]: What are John's goals for his career that are not related to his basketball skills?
+  - Expected: get endorsements, build his brand, do charity work | Got: Based on the conversation, John's goals for his career that are not related to h
+- **Q3** Cat1 Sing [✗]: What items does John collect?
+  - Expected: sneakers, fantasy movie DVDs, jerseys | Got: Based on the conversation, John collects jerseys.
+- **Q4** Cat3 Mult [✗]: Would Tim enjoy reading books by C. S. Lewis or John Greene?
+  - Expected: C. S.Lewis | Got: Not mentioned.
+- **Q5** Cat1 Sing [✗]: What books has Tim read?
+  - Expected: Harry Potter, Game of Thrones, the Name of the Wind, The Alc | Got: Based solely on the conversation, Tim has read "Harry Potter," "Game of Thrones,
+- **Q6** Cat3 Mult [✗]: Based on Tim's collections, what is a shop that he would enjoy visiting in New York city?
+  - Expected: House of MinaLima | Got: Not mentioned.
+- **Q7** Cat2 Temp [✗]: In which month's game did John achieve a career-high score in points?
+  - Expected: June 2023 | Got: Not mentioned.
+- **Q8** Cat1 Sing [✗]: Which geographical locations has Tim been to?
+  - Expected: California, London, the Smoky Mountains | Got: Based solely on the conversation, Tim has been to the following geographical loc
+- **Q9** Cat3 Mult [✗]: Which outdoor gear company likely signed up John for an endorsement deal?
+  - Expected: Under Armour | Got: Not mentioned.
+- **Q10** Cat1 Sing [✗]: Which endorsement deals has John been offered?
+  - Expected: basketball shoes and gear deal with Nike, potential sponsors | Got: Based on the conversation, John has been offered endorsement deals with Nike and
+- **Q11** Cat2 Temp [✗]: When was John in Seattle for a game?
+  - Expected: early August, 2023 | Got: Not mentioned.
+- **Q12** Cat1 Sing [✗]: What sports does John like besides basketball?
+  - Expected: surfing | Got: Not mentioned.
+- **Q13** Cat2 Temp [✗]: What year did John start surfing?
+  - Expected: 2018 | Got: Not mentioned.
+- **Q14** Cat1 Sing [✓]: What does Tim do to escape reality?
+  - Expected: Read fantasy books. | Got: Based on the conversation, Tim reads fantasy books to escape reality.
+- **Q15** Cat1 Sing [✗]: What kind of writing does Tim do?
+  - Expected: comments on favorite books in a fantasy literature forum, ar | Got: Tim writes articles about fantasy novels for an online magazine.
+
+### Convo 6 — Audrey & Andrew — 5/15 (33%)
+- **Q1** Cat2 Temp [✗]: Which year did Audrey adopt the first three of her dogs?
+  - Expected: 2020 | Got: Not mentioned.
+- **Q2** Cat2 Temp [✗]: When did Andrew start his new job as a financial analyst?
+  - Expected: The week before March 27, 2023 | Got: Not mentioned.
+- **Q3** Cat1 Sing [✗]: What kind of indoor activities has Andrew pursued with his girlfriend?
+  - Expected: boardgames, volunteering at pet shelter, wine tasting, growi | Got: Based on the conversation, Andrew and his girlfriend played board games (session
+- **Q4** Cat1 Sing [✗]: What kind of places have Andrew and his girlfriend checked out around the city?
+  - Expected: cafes, new places to eat, open space for hikes, pet shelter, | Got: Based on the conversation, Andrew and his girlfriend have checked out a new cafe
+- **Q5** Cat2 Temp [✗]: When did Audrey make muffins for herself?
+  - Expected: The week of April 3rd to 9th | Got: Not mentioned.
+- **Q6** Cat2 Temp [✗]: When did Audrey see a hummingbird?
+  - Expected: first week of May 2023 | Got: Not mentioned.
+- **Q7** Cat2 Temp [✓]: When did Audrey adopt Pixie?
+  - Expected: around April 2, 2023 | Got: Based on the conversation, Audrey adopted Pixie before session_2 on 2 April, 202
+- **Q8** Cat2 Temp [✗]: How many years passed between Audrey adopting Pixie and her other three dogs?
+  - Expected: three years | Got: Not mentioned.
+- **Q9** Cat2 Temp [✓]: Did Andrew have a pet dog during March 2023?
+  - Expected: No | Got: Not mentioned.
+- **Q10** Cat1 Sing [✗]: What kind of classes or groups has Audrey joined to take better care of her dogs?
+  - Expected: positive reinforcement training workshop to bond with pets,  | Got: Based on the conversation, Audrey joined a dog owners group (session 27) and a p
+- **Q11** Cat2 Temp [✗]: When did Audrey's positive reinforcement training course for dogs take place?
+  - Expected: June, 2023 | Got: Not mentioned.
+- **Q12** Cat2 Temp [✓]: When did Andrew go rock climbing?
+  - Expected: June 11, 2023 | Got: Andrew went rock climbing on the Sunday before the conversation on 13 June, 2023
+- **Q13** Cat1 Sing [✓]: What outdoor activities has Andrew done other than hiking in nature?
+  - Expected: rock climbing, fishing, camping | Got: Based on the conversation, Andrew has done rock climbing, fishing, biking, and c
+- **Q14** Cat2 Temp [✗]: When did Audrey move to a new place?
+  - Expected: June 2023 | Got: Not mentioned.
+- **Q15** Cat1 Sing [✓]: What is something that Andrew really misses while working in the city?
+  - Expected: being in nature | Got: Based on the conversation, Andrew really misses being outdoors in nature and the
+
+### Convo 7 — James & John — 3/15 (20%)
+- **Q1** Cat3 Mult [✗]: What are John's suspected health problems?
+  - Expected: Obesity | Got: Not mentioned.
+- **Q2** Cat2 Temp [✗]: Which recreational activity was James pursuing on March 16, 2022?
+  - Expected: bowling | Got: Not mentioned.
+- **Q3** Cat1 Sing [✗]: Which places or events have John and James planned to meet at?
+  - Expected: VR Club, McGee's, baseball game | Got: Based on the conversation, John and James planned to meet at McGee's pub (sessio
+- **Q4** Cat1 Sing [✓]: Do both James and John have pets?
+  - Expected: No | Got: Based on the conversation, James has pets (dogs named Max, Daisy, and Ned), but 
+- **Q5** Cat2 Temp [✗]: When did John resume playing drums in his adulthood?
+  - Expected: February 2022 | Got: Not mentioned.
+- **Q6** Cat1 Sing [✗]: What are John and James' favorite games?
+  - Expected: John's favorite game is CS:GO, and James's is Apex Legends. | Got: Based on the conversation, John's favorite game is CS:GO, and James' favorite ga
+- **Q7** Cat3 Mult [✗]: Does James live in Connecticut?
+  - Expected: Likely yes | Got: Not mentioned.
+- **Q8** Cat3 Mult [✗]: In which state is the shelter from which James adopted the puppy?
+  - Expected: Connecticut. | Got: Not mentioned.
+- **Q9** Cat1 Sing [✓]: How many pets does James have?
+  - Expected: Three dogs. | Got: James has three dogs: Max, Daisy, and Ned.
+- **Q10** Cat1 Sing [✗]: What are the names of James's dogs?
+  - Expected: Ned, Daisy, Max | Got: Max, Daisy, and Ned.
+- **Q11** Cat2 Temp [✓]: When did James adopt Ned?
+  - Expected: first week of April 2022 | Got: James adopted Ned last week (in session_5, which took place on 12 April, 2022).
+- **Q12** Cat2 Temp [✗]: How was John feeling on April 10, 2022?
+  - Expected: seeking solitude | Got: Not mentioned.
+- **Q13** Cat3 Mult [✗]: Did James have a girlfriend during April 2022?
+  - Expected: Presumably not | Got: Not mentioned.
+- **Q14** Cat2 Temp [✗]: When did James visit Italy?
+  - Expected: In 2021 | Got: Not mentioned.
+- **Q15** Cat2 Temp [✗]: When did James buy himself a new adventure book?
+  - Expected: April 26, 2022 | Got: Not mentioned.
+
+### Convo 8 — Deborah & Jolene — 5/15 (33%)
+- **Q1** Cat2 Temp [✗]: What kind of project was Jolene working on in the beginning of January 2023?
+  - Expected: electricity engineering project | Got: Not mentioned.
+- **Q2** Cat1 Sing [✓]: Which of Deborah`s family and friends have passed away?
+  - Expected: mother, father, her friend Karlie | Got: Based solely on the conversation, Deborah's mother, father, and friend Karlie ha
+- **Q3** Cat2 Temp [✗]: When did Deborah`s mother pass away?
+  - Expected: a few years before 2023 | Got: Not mentioned.
+- **Q4** Cat2 Temp [✗]: When did Jolene`s mother pass away?
+  - Expected: in 2022 | Got: Not mentioned.
+- **Q5** Cat2 Temp [✓]: When did Jolene's mom gift her a pendant?
+  - Expected: in 2010 | Got: 2010
+- **Q6** Cat3 Mult [✗]: In what country did Jolene's mother buy her the pendant?
+  - Expected: In France | Got: Paris
+- **Q7** Cat1 Sing [✗]: What symbolic gifts do Deborah and Jolene have from their mothers?
+  - Expected: pendants | Got: Deborah has a pendant from her mother. Jolene also has a pendant from her mother
+- **Q8** Cat2 Temp [✗]: Which country were Jolene and her mother visiting in 2010?
+  - Expected: France | Got: Not mentioned.
+- **Q9** Cat1 Sing [✗]: What helped Deborah find peace when grieving deaths of her loved ones?
+  - Expected: yoga, old photos, the roses and dahlias in a flower garden,  | Got: Based solely on the conversation, the following helped Deborah find peace when g
+- **Q10** Cat2 Temp [✓]: When did Deborah's father pass away?
+  - Expected: January 25, 2023 | Got: January 25, 2023
+- **Q11** Cat2 Temp [✓]: When was Deborah's parents' wedding?
+  - Expected: in 1993 | Got: 1993
+- **Q12** Cat3 Mult [✓]: Is Deborah married?
+  - Expected: yes | Got: Yes, Deborah is married. In session 2, she says "My husband and I are trying to 
+- **Q13** Cat2 Temp [✗]: When did Deborah receive an appreciation letter from her community?
+  - Expected: January 26, 2023 | Got: Not mentioned.
+- **Q14** Cat1 Sing [✗]: What places give Deborah peace?
+  - Expected: sitting in a spot by the window in her Mom's house, sitting  | Got: Based solely on the conversation, the places that give Deborah peace are: - Her 
+- **Q15** Cat1 Sing [✗]: What were Deborah's mother's hobbies?
+  - Expected: reading, traveling, art, cooking | Got: Based on the conversation, Deborah's mother's hobbies were reading and travel.
+
+### Convo 9 — Evan & Sam — 8/15 (53%)
+- **Q1** Cat1 Sing [✓]: What kind of car does Evan drive?
+  - Expected: Prius | Got: Based on the conversation, Evan drives a Prius.
+- **Q2** Cat1 Sing [✓]: What kinds of things did Evan have broken?
+  - Expected: His old Prius and his new Prius. | Got: Based solely on the conversation, Evan had the following things broken: his old 
+- **Q3** Cat1 Sing [✗]: Where has Evan been on roadtrips with his family?
+  - Expected: Rockies, Jasper | Got: Based on the conversation, Evan has been on road trips with his family to the Ro
+- **Q4** Cat1 Sing [✓]: How many Prius has Evan owned?
+  - Expected: two | Got: Based on the conversation, Evan has owned at least two Prius cars. He mentions h
+- **Q5** Cat2 Temp [✗]: Which hobby did Sam take up in May 2023?
+  - Expected: painting | Got: Not mentioned.
+- **Q6** Cat3 Mult [✗]: Which country was Evan visiting in May 2023?
+  - Expected: Canada | Got: Not mentioned.
+- **Q7** Cat1 Sing [✗]: How many roadtrips did Evan take in May 2023?
+  - Expected: two | Got: Based on the conversation, Evan took one road trip in May 2023. In session_1 on 
+- **Q8** Cat1 Sing [✗]: What new hobbies did Sam consider trying?
+  - Expected: Painting, kayaking, hiking, cooking, running | Got: Based on the conversation, Sam considered trying painting (session 1, session 3,
+- **Q9** Cat1 Sing [✓]: What hobby did Evan start practicing a few years ago that he enjoys?
+  - Expected: Watercolor painting | Got: Based on the conversation, Evan started watercolor painting a few years ago and 
+- **Q10** Cat2 Temp [✓]: When did Evan go to Jasper with his family?
+  - Expected: weekend before May 24, 2023 | Got: Based on the conversation, Evan went to Jasper with his family last weekend befo
+- **Q11** Cat3 Mult [✓]: Which type of vacation would Evan prefer with his family, walking tours in metropolitan cities or ca
+  - Expected: camping trip in the outdoors | Got: Based on the conversation, Evan prefers camping trips in the outdoors. He freque
+- **Q12** Cat1 Sing [✗]: What health issue did Sam face that motivated him to change his lifestyle?
+  - Expected: Weight problem | Got: Based on the conversation, Sam's doctor told him his weight was a serious health
+- **Q13** Cat2 Temp [✓]: When did Sam first go to the doctor and find out he had a weight problem?
+  - Expected: A few days before May 24, 2023. | Got: Based on the conversation, Sam first went to the doctor and found out about his 
+- **Q14** Cat2 Temp [✗]: When did Evan have his sudden heart palpitation incident that really shocked him up?
+  - Expected: first week of June 2023 | Got: Not mentioned.
+- **Q15** Cat1 Sing [✓]: What is Evan's favorite food?
+  - Expected: Ginger snaps | Got: Based on the conversation, Evan's favorite food is ginger snaps.
+
+### Convo 10 — Calvin & Dave — 3/15 (20%)
+- **Q1** Cat2 Temp [✗]: When did Calvin first travel to Tokyo?
+  - Expected: between 26 March and 20 April 2023 | Got: Not mentioned.
+- **Q2** Cat1 Sing [✗]: What items did Calvin buy in March 2023?
+  - Expected: mansion in Japan, luxury car Ferrari 488 GTB | Got: Not mentioned.
+- **Q3** Cat2 Temp [✗]: When did Dave see Aerosmith perform live?
+  - Expected: on the weekend before March 26, 2023 | Got: Not mentioned.
+- **Q4** Cat1 Sing [✓]: Which bands has Dave enjoyed listening to?
+  - Expected: Aerosmith, The Fireworks | Got: Based on the conversation, Dave has enjoyed listening to Aerosmith, The Firework
+- **Q5** Cat3 Mult [✗]: Which country do Calvin and Dave want to meet in?
+  - Expected: United States | Got: Based on the conversation, Calvin and Dave plan to meet in Boston.
+- **Q6** Cat1 Sing [✓]: What are Dave's dreams?
+  - Expected: open a car maintenance shop, work on classic cars, build a c | Got: Based only on the conversation, Dave's dreams are: opening his own car maintenan
+- **Q7** Cat1 Sing [✗]: Which types of cars does Dave like the most?
+  - Expected: classic vintage cars | Got: Based on the conversation, Dave likes classic cars the most. He mentions being "
+- **Q8** Cat3 Mult [✗]: Does Dave's shop employ a lot of people?
+  - Expected: Yes | Got: Not mentioned.
+- **Q9** Cat2 Temp [✗]: When did Dave start his car maintenance shop?
+  - Expected: May 1, 2023 | Got: Not mentioned.
+- **Q10** Cat2 Temp [✓]: When did a mishap occur with Calvin's musical gear and favorite mic?
+  - Expected: On a week before 16 May, 2023 | Got: The mishap occurred last week (relative to session_6 on 16 May, 2023).
+- **Q11** Cat2 Temp [✗]: When did Calvin's place get flooded in Tokyo?
+  - Expected: On a week before 16 May, 2023 | Got: Not mentioned.
+- **Q12** Cat1 Sing [✗]: What mishaps has Calvin run into?
+  - Expected: flooding of his mansion, car accident | Got: Based solely on the conversation, Calvin has run into the following mishaps:  1.
+- **Q13** Cat2 Temp [✗]: When was Calvin's concert in Tokyo?
+  - Expected: last week of May 2023 | Got: Not mentioned.
+- **Q14** Cat3 Mult [✗]: Would Calvin enjoy performing at the Hollywood Bowl?
+  - Expected: Yes; because he enjoys the rush of performing onstage to lar | Got: Not mentioned.
+- **Q15** Cat2 Temp [✗]: When did Calvin meet with the creative team for his new album?
+  - Expected: 8 June, 2023 | Got: Not mentioned.

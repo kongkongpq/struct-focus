@@ -1,0 +1,531 @@
+// @struct/context — Benchmark 话题库（12 个预写话题 × 6 轮）
+//
+// 设计：所有对话均为"确定性预写"（非 LLM 生成），避免训练数据污染。
+// 每个话题自带 1 道最终提问 + 命中关键词；benchmark 总是考"第一个话题"
+// （遗忘曲线测试），中间话题是干扰噪声。
+//
+// 关键词的选择原则：尽量出现在对话正文中，且是调用 StructAgent 召回后
+// 能在胶囊摘要里保留的术语（便于确定性回退与真实 LLM 都能命中）。
+
+import type { Topic } from "../types.js";
+
+export const TOPICS: Topic[] = [
+  // ─── 话题 0：进程调度器（始终作为"最终提问"目标） ─────────────
+  {
+    name: "process_scheduler",
+    title: "进程调度器（Rust 写 OS 内核）",
+    context: "正在用 Rust 写一个 OS 内核的进程调度器",
+    qa: {
+      question: "调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+      keywords: ["O(n)", "链表", "二叉堆", "log n", "遍历"],
+    },
+    rounds: [
+      {
+        user: "我们在用 Rust 写 OS 内核，进程调度器高负载下延迟从 2ms 飙升到 80ms，有什么建议？",
+        assistant:
+          "40 倍的退化。先查三点：1) 调度器数据结构——链表 O(n) 还是红黑树？2) 内核是否有长时间禁抢占的临界区？3) CPU-bound 进程是否饥饿了 I/O-bound？发你的 scheduler.rs 看看。",
+      },
+      {
+        user: "用链表遍历 O(n) 找最高优先级，进程约 200 个。抢占是关中断实现的，临界区最大 15μs。",
+        assistant:
+          "O(n) 遍历 200 进程是主因。每次调度扫描全部，开销太高。换成二叉堆 BinaryHeap，O(log n) 插入/弹出。Linux CFS 用红黑树，但你的规模二叉堆够用且更简单。",
+      },
+      {
+        user: "二叉堆写好了，延迟恢复到 ~5ms。但 iowait 时 CPU 利用率只有 30%，调度器在空转。",
+        assistant:
+          "经典问题——无进程可运行时调度器在 idle loop spin。需要 WFI(ARM) 或 HLT(x86) 让 CPU 进低功耗等中断。实现 idle task：runqueue 为空时切到 idle task → 执行 hlt → 中断处理程序 enqueue 新进程时唤醒。",
+      },
+      {
+        user: "idle task 加了，CPU 功耗降 40%。想加多核 SMP，调度器怎么设计？",
+        assistant:
+          "SMP 四要素：1) Per-CPU runqueue 避免全局锁；2) 负载均衡每 tick/idle 迁移任务；3) CPU 亲和性保持缓存热度；4) IPI 核间中断。先做 per-CPU runqueue + 简单 push/pull。",
+      },
+      {
+        user: "per-CPU runqueue 写一半，CPU0 持自己锁想偷 CPU1 的任务，CPU1 也在偷 CPU0，死锁了。",
+        assistant:
+          "经典 ABBA 死锁。标准解法：按 CPU id 排序加锁——先锁编号小的 runqueue。或 try_lock 偷失败就跳过。Linux 的做法是 work-stealing 单向——idle CPU 主动从 busiest CPU 拿。方案 1 最直接。",
+      },
+      {
+        user: "死锁解决了。现在做 buddy allocator 分配 64 页连续内存经常失败，外部碎片严重。",
+        assistant:
+          "Buddy 在大块分配时碎片是主要痛点。两个方向：1) 用分页+MMU 映射，进程看到连续虚拟地址但物理页不需要连续；2) 如果必须物理连续，加 memory compaction 移动已分配页。建议先做方案 1：实现页表映射，让 buddy 只分配 order 0-3 小块。",
+      },
+    ],
+  },
+
+  // ─── 话题 1：内存分配器 ───────────────────────────────────
+  {
+    name: "memory_allocator",
+    title: "Buddy Allocator 大块内存分配",
+    context: "内核的 buddy allocator 在分配大块连续内存时失败",
+    qa: {
+      question: "大块内存分配失败的解决方案？",
+      keywords: ["页表", "MMU", "虚拟地址", "物理页", "compaction"],
+    },
+    rounds: [
+      {
+        user: "buddy allocator 分配 64 页连续内存经常失败，外部碎片严重，怎么解？",
+        assistant:
+          "Buddy 在大块分配时碎片是主要痛点。两个方向：1) 用分页+MMU 映射，进程看到连续虚拟地址但物理页不需要连续；2) 若必须物理连续，加 memory compaction 移动已分配页。",
+      },
+      {
+        user: "方案 1 具体怎么做？我现在虚拟地址和物理页是 1:1 直接映射。",
+        assistant:
+          "建议实现页表映射：建立多级页表，让 buddy 只分配 order 0-3 的小块物理页，MMU 把这些不连续的物理页映射到一段连续的虚拟地址。这样上层完全感知不到物理不连续。",
+      },
+      {
+        user: "多级页表用几级？我是 64 位架构，48 位虚拟地址。",
+        assistant:
+          "48 位虚拟地址通常用 4 级页表（每级 9 位 + 12 位页内偏移）。页表项 PTE 里放物理页帧号 + 权限位。TLB 未命中时由 MMU 硬件遍历页表。记得刷新 TLB（invlpg）再切换映射。",
+      },
+      {
+        user: "页表加上了，连续虚拟地址能分配了。但物理页还是不够，compaction 怎么做？",
+        assistant:
+          "memory compaction 的核心：把已分配的物理页尽量搬到低端，腾出连续的空闲区。难点是正在使用的页要先迁移内容再更新所有引用它的页表项。可以先只 compaction 可移动的页（用户态页），跳过内核 pinned 页。",
+      },
+      {
+        user: "compaction 时怎么保证不破坏正在访问的页？",
+        assistant:
+          "标准做法：1) 先暂停相关 CPU 的调度（或靠 RCU）；2) 复制旧物理页内容到新物理页；3) 用内存屏障保证复制完成；4) 原子切换页表项指向新物理页；5) 释放旧物理页。期间用 per-CPU 的迁移队列避免竞争。",
+      },
+      {
+        user: "明白了。那 order 0-3 小块用 buddy，更大块统一走页表映射，行得通？",
+        assistant:
+          "可行，这是大多数现代内核的折中：小分配走 buddy 保证物理连续（DMA 需要），大分配走分页+MMU 虚拟连续。compaction 作为后台线程周期性跑，避免运行时卡顿。记得监控碎片率指标。",
+      },
+    ],
+  },
+
+  // ─── 话题 2：网络栈 ─────────────────────────────────────
+  {
+    name: "network_stack",
+    title: "用户态 TCP/IP 协议栈",
+    context: "正在实现一个用户态 TCP/IP 协议栈",
+    qa: {
+      question: "TCP 重传超时怎么算？",
+      keywords: ["RTO", "RTT", "Karn算法", "重传", "超时"],
+    },
+    rounds: [
+      {
+        user: "我在写用户态 TCP/IP 协议栈，TCP 重传超时怎么算才对？",
+        assistant:
+          "经典算法：维护平滑 RTT（SRTT）和 RTT 方差（RTTVAR），RTO = SRTT + 4*RTTVAR。初始 RTO 建议 1s，重传后指数退避（翻倍），直到收到确认。",
+      },
+      {
+        user: "SRTT 和 RTTVAR 具体怎么更新？",
+        assistant:
+          "每收到一个带时间戳的 ACK：SampleRTT = 现在 - 发送时。SRTT = (1-α)*SRTT + α*SampleRTT（α=1/8）；RTTVAR = (1-β)*RTTVAR + β*|SampleRTT - SRTT|（β=1/4）。RTO = SRTT + 4*RTTVAR，下限 200ms 上限 60s。",
+      },
+      {
+        user: "问题来了：重传的那段又收到 ACK，不知道这 ACK 是确认初传还是重传，RTT 算错怎么办？",
+        assistant:
+          "这就是 Karn 算法要解决的：重传的报文段不参与 RTT 采样（Karn 算法）。只有未重传的报文段才用其 SampleRTT 更新 SRTT/RTTVAR。超时重传时 RTO 直接指数退避，不采样。",
+      },
+      {
+        user: "重传的超时退避上限是多少？一直翻倍不行吧。",
+        assistant:
+          "重传时 RTO = min(RTO * 2, RTO_MAX)，RTO_MAX 一般 60s。退避防止风暴。一旦收到新数据 ACK，RTO 复位回 SRTT+4*RTTVAR（撤销退避）。Karn 算法配合退避，避免持续高估 RTO。",
+      },
+      {
+        user: "快速重传（fast retransmit）和超时重传怎么配合？",
+        assistant:
+          "超时重传是兜底（RTO 触发，指数退避）。快速重传是收到 3 个重复 ACK 立即重传丢失段，不等超时，RTO 不退避。两者并存：dup ACK 路径快速恢复，超时路径保证最终可靠。",
+      },
+      {
+        user: "那如果一直丢包，RTO 退避到 60s，连接会不会被判定死亡？",
+        assistant:
+          "会。连续重传超过阈值（如 Linux 默认 15 次或 RTO 累计超限）就触发连接 reset。所以重传超时算法要在『敏感』和『不过早放弃』之间平衡——Karn 算法 + 指数退避 + 上限 60s 这套组合就是工业标准。",
+      },
+    ],
+  },
+
+  // ─── 话题 3：日志文件系统 ───────────────────────────────
+  {
+    name: "filesystem_journal",
+    title: "日志文件系统（Journaling FS）",
+    context: "想要给内核加一个日志文件系统",
+    qa: {
+      question: "日志文件系统的核心组件？",
+      keywords: ["superblock", "journal", "checkpoint", "崩溃恢复", "WAL"],
+    },
+    rounds: [
+      {
+        user: "想给内核加一个日志文件系统，核心组件有哪些？",
+        assistant:
+          "五大件：1) superblock 存全局元数据；2) journal（日志区）记录未提交事务；3) inode/block bitmap 管理空间；4) checkpoint 机制把日志落盘到主结构；5) 崩溃恢复重放日志。本质是 WAL（Write-Ahead Logging）思想。",
+      },
+      {
+        user: "superblock 坏了整个文件系统就挂了，怎么保护？",
+        assistant:
+          "超级块做冗余：主 superblock 放固定位置，再写几个备份 superblock 到不同块组（参考 ext 的稀疏备份）。挂载时校验校验和，主损坏就读备份。关键字段（魔数、块数、状态位）加 CRC32。",
+      },
+      {
+        user: "journal 写提交事务的具体流程？",
+        assistant:
+          "WAL 三步：1) 把待改的元数据块写入 journal 的『事务体』；2) 写 commit 记录（带校验和）标记事务完成；3) 后台 checkpoint 把 journal 内容刷到主文件系统。只有 commit 落盘后，事务才算持久，崩溃可从 journal 重放。",
+      },
+      {
+        user: "崩溃后怎么恢复？从重头扫 journal 吗？",
+        assistant:
+          "崩溃恢复：从 journal 头部扫事务，找到最后一个完整 commit 的事务，重放它之后的所有已提交事务（redo）。未提交的不重放。重放完做 checkpoint 把脏块写回主结构，然后截断 journal。WAL 保证要么全做要么不做。",
+      },
+      {
+        user: "checkpoint 太频繁影响性能，怎么权衡？",
+        assistant:
+          "checkpoint 频率是吞吐 vs 恢复时间的权衡：高频→恢复快但写放大；低频→性能好但崩溃后要重放更多。折中：按 journal 占用率触发（如 50% 满强制 checkpoint），再配合定期的定时 checkpoint（如每 5s）。",
+      },
+      {
+        user: "data=ordered 和 data=writeback 模式区别？",
+        assistant:
+          "这是 journal 是否记录『数据』块：writeback 只日志元数据，数据可能比元数据先落盘，崩溃可能读到旧数据；ordered 保证数据块先写主区、再写元数据 journal，崩溃一致性更强但稍慢。journal 模式则数据和元数据都进 journal，最安全最慢。",
+      },
+    ],
+  },
+
+  // ─── 话题 4：中断处理 ───────────────────────────────────
+  {
+    name: "interrupt_handling",
+    title: "中断处理（顶半部/底半部）",
+    context: "内核中断延迟高，需要优化中断处理",
+    qa: {
+      question: "中断处理为什么分顶半部和底半部？",
+      keywords: ["顶半部", "底半部", "软中断", "tasklet", "上下文"],
+    },
+    rounds: [
+      {
+        user: "网卡中断一多，系统卡得不行，中断处理为什么分顶半部和底半部？",
+        assistant:
+          "中断上下文不能睡眠、不能调度，打断了正在跑的进程。顶半部（hardirq）只做最紧急的——应答硬件、把数据拷到 Ring Buffer；耗时工作（协议解析）推迟到底半部，让 CPU 尽快恢复被中断的进程。",
+      },
+      {
+        user: "底半部用软中断还是 tasklet？",
+        assistant:
+          "软中断（softirq）可多核并行但自己得保证无锁安全，适合网络收发这种高吞吐；tasklet 是软中断的包装，同一 tasklet 全局串行，写起来简单、不会重入。吞吐优先用 softirq，简单优先用 tasklet。",
+      },
+      {
+        user: "softirq 在哪些上下文跑？我看有时候在中断返回时跑。",
+        assistant:
+          "softirq 在两处触发：1) 硬中断返回内核态时（中断上下文）；2) 内核线程 ksoftirqd 里（进程上下文，软中断攒太多时）。后者避免软中断饿死进程。所以软中断代码既要能跑在中断上下文也要能跑在进程上下文。",
+      },
+      {
+        user: "tasklet 会不会在不同 CPU 上并发执行同一个？",
+        assistant:
+          "不会。tasklet 的状态位（TASKLET_STATE_SCHED/RUN）保证同一 tasklet 同一时刻只在一个 CPU 上跑，天然防重入。但不同 tasklet 可以在不同 CPU 并行。所以 tasklet 内部一般不用加锁保护自身状态。",
+      },
+      {
+        user: "workqueue 和 tasklet 又有什么区别？",
+        assistant:
+          "workqueue 跑在进程上下文（内核线程），可以睡眠、可以调度；tasklet/softirq 跑在中断上下文，不能睡眠。耗时且可能阻塞的工作（如磁盘 IO、复杂分配）用 workqueue；纯 CPU 计算且短平快用 tasklet。",
+      },
+      {
+        user: "那我的网卡驱动该用哪套？",
+        assistant:
+          "标准 NAPI 模式：硬中断里只 mask 中断+raise softirq；softirq 里 poll Ring Buffer 收包、做协议栈处理；真正耗时的（如拷贝给用户态）丢给 workqueue。顶半部极短，底半部分级，中断上下文尽量薄。",
+      },
+    ],
+  },
+
+  // ─── 话题 5：虚拟内存与分页 ─────────────────────────────
+  {
+    name: "virtual_memory",
+    title: "虚拟内存与分页",
+    context: "系统频繁 page fault，虚拟内存子系统需要调优",
+    qa: {
+      question: "缺页中断（page fault）有哪几类，怎么处理？",
+      keywords: ["缺页中断", "页表", "TLB", "换页", "匿名页"],
+    },
+    rounds: [
+      {
+        user: "程序跑着频繁 page fault，缺页中断到底有哪几类？",
+        assistant:
+          "三类：1) 次要缺页（minor）——页在内存但页表没映射，如 COW 副本、文件缓存命中，不用读盘；2) 主要缺页（major）——页不在内存，要从磁盘/文件换入，慢；3) 无效缺页——访问非法地址，直接 SIGSEGV。处理成本 major >> minor。",
+      },
+      {
+        user: "页表是硬件查的还是软件查的？",
+        assistant:
+          "MMU 硬件查页表做地址翻译，但页表本身在内存里。MMU 走多级页表找到 PTE，得到物理页帧，翻译虚拟地址。页表项不在 TLB 时触发硬件页表遍历；遍历失败（PTE 无效）才上报 CPU 产生缺页中断交给 OS。",
+      },
+      {
+        user: "TLB miss 很贵，怎么减少？",
+        assistant:
+          "TLB 是地址翻译缓存，miss 要遍历多级页表（几次内存访问）。减少办法：1) 用大页（huge page）让一个 TLB 项覆盖更大范围；2) 提高空间局部性；3) 避免频繁切换地址空间（每次切换要刷 TLB）。关键路径用大页效果最明显。",
+      },
+      {
+        user: "匿名页（堆/栈）和文件页的换页策略一样吗？",
+        assistant:
+          "不一样。匿名页只能换到 swap 区；文件页换出后可直接从原文件读回（除非 dirty 要先写回）。LRU 链表把两者分开（active/inactive 各两份），优先换 inactive 文件页，再 anonymous。脏匿名页换出就是真写 swap，贵。",
+      },
+      {
+        user: "COW（写时复制）是怎么和缺页中断配合的？",
+        assistant:
+          "fork 时父子共享物理页，PTE 标只读。任一方写这块→触发次要缺页→OS 复制一份物理页、更新页表指向各自副本、恢复可写。这就是 COW，把昂贵的复制推迟到真正写入时。exec 时则整体换页映射新程序。",
+      },
+      {
+        user: "那 OOM 是怎么发生的？和换页什么关系？",
+        assistant:
+          "当物理内存 + swap 都被匿名页和文件页占满、且 LRU 找不到可换出页时，分配器触发 OOM killer：按 oom_score 挑进程杀掉腾出内存。减少 major page fault 和 swap 颠簸（thrashing）是关键——给关键进程锁页（mlock）能避免被换出。",
+      },
+    ],
+  },
+
+  // ─── 话题 6：并发与锁 ───────────────────────────────────
+  {
+    name: "concurrency_locks",
+    title: "并发与同步原语",
+    context: "内核里出现并发竞态和死锁",
+    qa: {
+      question: "自旋锁和互斥锁怎么选？",
+      keywords: ["自旋锁", "互斥锁", "临界区", "抢占", "死锁"],
+    },
+    rounds: [
+      {
+        user: "内核里自旋锁和互斥锁到底怎么选？老搞混。",
+        assistant:
+          "核心区别：自旋锁在临界区短且不能睡眠的场景用（中断上下文、持锁时间极短），抢不到就忙等；互斥锁（mutex）临界区长、可能睡眠时用，抢不到就睡眠让出 CPU。原则：持锁时间 < 上下文切换开销用自旋，否则用互斥。",
+      },
+      {
+        user: "自旋锁在单核上不是纯浪费吗？",
+        assistant:
+          "单核上自旋锁通常关抢占（或退化为 no-op），因为单核不可能真并行，自旋只浪费。多核上才真正自旋。所以写自旋锁代码要假设可能被抢占/迁移，加锁期间禁止抢占，且绝不能调用可能睡眠的函数。",
+      },
+      {
+        user: "临界区里调用了可能睡眠的函数，会怎样？",
+        assistant:
+          "自旋锁持有时睡眠 = 死锁温床：当前 CPU 自旋等锁，但持锁线程睡了，别的 CPU 也来自旋，系统卡死。所以自旋锁临界区禁止一切可能睡眠的操作（alloc、copy_to_user、调度）。必须用互斥锁的场景就别用自旋锁。",
+      },
+      {
+        user: "多个锁怎么避免死锁？",
+        assistant:
+          "经典 ABBA 死锁。规则：1) 全局约定加锁顺序（按地址/编号排序）；2) 用 try_lock 失败就回退全部锁重试；3) 锁的粒度尽量小、持有时间尽量短。内核提供 lockdep 在运行时检测违反顺序的加锁，提前暴露死锁。",
+      },
+      {
+        user: "读写锁（rwlock）适合什么？",
+        assistant:
+          "读多写少用 rwlock：多个读者并发、写者独占。但写者可能饿死（读者源源不断）。读偏向且写少才划算；写频繁会退化。RCU 是更激进的读优化——读者无锁，写者等宽限期（grace period）后回收旧值，适合极读多写少。",
+      },
+      {
+        user: "那读多写少且要求极低延迟，用 RCU？",
+        assistant:
+          "对。RCU 读者零开销（就一个指针解引用），写者复制一份改完、原子换指针，等所有读者退出临界区（宽限期）再释放旧副本。代价是写开销和内存回收延迟。spinlock/mutex 适合通用，rwlock 适合读多，RCU 适合极致读性能且能接受写慢。",
+      },
+    ],
+  },
+
+  // ─── 话题 7：设备驱动 ───────────────────────────────────
+  {
+    name: "device_drivers",
+    title: "字符设备驱动",
+    context: "编写一个内核字符设备驱动",
+    qa: {
+      question: "字符设备驱动的 read/write 怎么和用户态对接？",
+      keywords: ["file_operations", "ioctl", "copy_to_user", "设备号", "probe"],
+    },
+    rounds: [
+      {
+        user: "写个字符设备驱动，read/write 怎么和用户态对接？",
+        assistant:
+          "注册一个 file_operations 结构体，实现 .read/.write 等回调。用户态 open 拿到 fd，read/write 系统调用就进到你的回调。核心是用 copy_to_user / copy_from_user 在用户缓冲区和内核缓冲区之间搬运数据，不能直接解引用用户指针。",
+      },
+      {
+        user: "设备号怎么分配？主设备号次设备号是啥关系？",
+        assistant:
+          "字符设备用设备号（dev_t = 主+次）标识。主设备号标识驱动，次设备号标识同驱动下的具体实例。可以用 register_chrdev_region 静态申请，或 alloc_chrdev_region 让内核动态分配主号。再配一个 class_create + device_create 在 /dev 下自动出节点。",
+      },
+      {
+        user: "设备有特殊控制命令，用 ioctl 还是 sysfs？",
+        assistant:
+          "ioctl 适合复杂、带参数的设备控制（一个命令号 + 结构体），但接口易膨胀、类型不安全。简单属性（开关、状态）用 sysfs 更规范、可被 shell 直接 echo。新驱动倾向 sysfs/debugfs 暴露属性，ioctl 只留给真正命令式的操作。",
+      },
+      {
+        user: "copy_to_user 失败怎么处理？",
+        assistant:
+          "copy_to_user 返回未拷贝的字节数，非 0 表示用户地址非法或内存不足。必须检查返回值：返回 -EFAULT。绝不能忽略——否则可能内核踩到坏地址或泄露部分数据。写操作时同理检查 copy_from_user 的返回值。",
+      },
+      {
+        user: "设备是热插拔的（比如 USB），怎么知道何时绑定？",
+        assistant:
+          "总线驱动匹配到设备后调用驱动的 probe 函数，在这里申请资源、注册字符设备、建 /dev 节点。拔出时 remove 释放。设备号、irq 等都在 probe 里按需申请，不要模块加载时一次性申请——那是老式写法，不支持多实例热插拔。",
+      },
+      {
+        user: "probe 里申请了多个资源，其中一个失败要回滚，怎么写干净？",
+        assistant:
+          "两种干净写法：1) goto 风格的错误处理标签（err_free_irq: / err_unreg: 逆序释放），Linux 内核经典；2) 用 devm_ 系列托管资源（devm_kzalloc、devm_request_irq），设备解绑时自动释放，不用手写回滚。新代码优先 devm_，少写 80% 清理代码。",
+      },
+    ],
+  },
+
+  // ─── 话题 8：引导加载 ───────────────────────────────────
+  {
+    name: "bootloader",
+    title: "引导加载与内存布局",
+    context: "从 BIOS/UEFI 到内核入口的引导过程",
+    qa: {
+      question: "从加电到内核 main 经历了哪些阶段？",
+      keywords: ["UEFI", "bootloader", "实模式", "页表", "内核入口"],
+    },
+    rounds: [
+      {
+        user: "从按下电源到内核 main()，中间经历哪些阶段？",
+        assistant:
+          "现代流程：1) 固件（UEFI）加电自检、找启动设备；2) 加载 bootloader（如 systemd-boot/GRUB）到内存；3) bootloader 读内核镜像、建初始页表、切到保护模式/长模式；4) 跳内核入口（_start）；5) 内核早期汇编做 CPU 初始化后调 C 的 start_kernel → main。",
+      },
+      {
+        user: "UEFI 和老 BIOS 引导差别大吗？",
+        assistant:
+          "差别大。BIOS 是 16 位实模式、靠中断 INT 13h 读盘、有 1MB 内存天花板；UEFI 是 32/64 位、有自己协议栈和文件系统驱动、可直接读 FAT 分区里的 EFI 应用。UEFI 下 bootloader 是普通的 .efi PE 文件，不用再手写实模式磁盘读取。",
+      },
+      {
+        user: "实模式到长模式为什么要先建页表？",
+        assistant:
+          "64 位长模式强制开启分页（哪怕恒等映射）。bootloader 要先建好页表（至少把内核虚拟地址映射到物理地址，通常恒等映射 + 内核高端映射），把 CR3 指向页表基址、置 CR0.PG=1、置 EFER.LME=1 才进入长模式。页表没建好进长模式会 triple fault。",
+      },
+      {
+        user: "内核入口 _start 一般做啥？",
+        assistant:
+          "早期入口是汇编：1) 设置栈（用 bootloader 预留的栈或临时栈）；2) 保存 boot 参数（如 EFI 内存映射、cmdline）；3) 清零 BSS 段；4) 校准 GDT/IDT；5) 调 C 函数（如 x86_64_start_kernel）。C 里再初始化内存管理器、调度器，最后到 rest_init → main。",
+      },
+      {
+        user: "内核怎么知道物理内存布局？UEFI 给的吗？",
+        assistant:
+          "是。UEFI 的 ExitBootServices 前提供内存映射表（EFI_MEMORY_DESCRIPTOR），列出哪些区间可用/保留/ACPI/MMIO。bootloader 把它传给内核，内核据此建物理页分配器（buddy 的前身）。丢掉这张表就可能踩到 MMIO 或固件保留区导致崩溃。",
+      },
+      {
+        user: "为什么还要切换一次页表（内核自己的）？",
+        assistant:
+          "bootloader 的页表只是临时候场。内核起来后重建完整页表：内核映像高端映射、直接映射区（physmap）、用户空间留白。早期恒等映射页表被替换，切换时短暂用临时映射过渡，避免切换瞬间地址失效。这也是为什么内核入口后不久就要重设 CR3。",
+      },
+    ],
+  },
+
+  // ─── 话题 9：系统调用 ───────────────────────────────────
+  {
+    name: "syscall_interface",
+    title: "系统调用 ABI",
+    context: "新增一个系统调用",
+    qa: {
+      question: "用户态怎么陷入内核执行系统调用？",
+      keywords: ["syscall", "int 0x80", "寄存器", "内核栈", "返回"],
+    },
+    rounds: [
+      {
+        user: "用户态程序到底怎么陷入内核执行系统调用？",
+        assistant:
+          "x86-64 用 syscall 指令（替代老的 int 0x80 软中断）：用户态把系统调用号放 RAX、参数放 RDI/RSI/RDX/R10/R8/R9，执行 syscall 触发特权级切换，MSR 里的 handle 跳到内核入口，内核从寄存器取值分发到具体服务例程。",
+      },
+      {
+        user: "syscall 指令和老式 int 0x80 差在哪？",
+        assistant:
+          "int 0x80 走中断门、要查 IDT、保存一堆上下文，慢；syscall 是专用指令、用 MSR 直接存内核 RIP/RSP，省去查表，快一个数量级。现代用户态 libc（glibc）默认走 syscall。int 0x80 仅作 32 位兼容保留。",
+      },
+      {
+        user: "参数在寄存器里，内核能直接读吗？",
+        assistant:
+          "内核入口先从寄存器把参数取出来存到内核栈上的 pt_regs 结构，再做参数校验（比如用户指针要先 access_ok 再 copy_from_user）。不能直接信任用户寄存器值，也不能直接解引用用户传来的指针——那是经典提权漏洞来源。",
+      },
+      {
+        user: "系统调用执行时用什么栈？",
+        assistant:
+          "从用户栈切换到当前 CPU 的内核栈（per-CPU 的 trampoline/thread 栈）。syscall 进入时硬件和内核代码把返回地址、寄存器压到内核栈，返回时 iret/sysret 恢复用户上下文。内核栈很小（通常 8-16KB），所以系统调用里不能开大数组。",
+      },
+      {
+        user: "返回值怎么传回用户态？",
+        assistant:
+          "约定把返回值放 RAX。出错时放负的 errno 绝对值（如 -ENOENT），libc 把它转成 errno 并返回 -1。sysret 切回用户态后，用户程序从 RAX 拿结果。注意返回前要把内核栈上残留的敏感数据清掉，避免信息泄露。",
+      },
+      {
+        user: "加一个新系统调用要改哪些地方？",
+        assistant:
+          "四步：1) 实现服务函数（如 sys_mycall）；2) 在 syscall 表（sys_call_table）按号登记；3) 在 unistd.h 定义号 + 给用户态 libc 头；4) 写 wrapper。现代内核还建议用 io_uring / syscall 表外的机制替代新增号。记得加 CAP 检查和安全审计。",
+      },
+    ],
+  },
+
+  // ─── 话题 10：CPU 频率与功耗 ────────────────────────────
+  {
+    name: "cpu_power",
+    title: "CPU 频率调节与功耗",
+    context: "移动设备上 CPU 发热降频严重",
+    qa: {
+      question: "CPU 调频（DVFS）是怎么工作的？",
+      keywords: ["DVFS", "governor", "cpufreq", "P-state", "thermal"],
+    },
+    rounds: [
+      {
+        user: "移动设备一发热就降频卡顿，CPU 调频（DVFS）到底怎么工作？",
+        assistant:
+          "DVFS = 动态电压频率调节：频率越低所需电压越低、功耗按电压平方下降。内核 cpufreq 子系统在可用 P-state 之间切换，由 governor 决定目标频率。thermal 子系统在温度超阈值时强制降频（thermal throttling）保护硬件。",
+      },
+      {
+        user: "governor 有哪几种，怎么选？",
+        assistant:
+          "常见：performance（锁最高频）、powersave（锁最低频）、ondemand（按利用率跳变）、conservative（平滑升降）、schedutil（跟调度器走，最现代）。服务器用 performance，笔记本/手机用 schedutil 平衡续航与响应。老 ondemand 已不推荐。",
+      },
+      {
+        user: "P-state 和 C-state 是一回事吗？",
+        assistant:
+          "不是。P-state 是性能状态（调频率/电压，仍运行）；C-state 是空闲状态（关时钟/断电休眠，省电不干活）。两者正交：忙时调 P-state 选频率，闲时进 C-state 休眠。深度 C-state 唤醒有延迟，所以 idle 调度要权衡省电 vs 唤醒延迟。",
+      },
+      {
+        user: "温度怎么影响调频？thermal 框架怎么联动？",
+        assistant:
+          "thermal 框架有 zone（温度传感器）和 cooling device（如 cpufreq 冷却器）。温度升到 trip point → 触发 cooling：让 cpufreq governor 限最高 P-state 降频。多级 trip（预警/临界），临界温度直接 shutdown。这是 passive 冷却，比风扇（active）慢但静音。",
+      },
+      {
+        user: "为什么降频后反而更卡，不只是慢一点？",
+        assistant:
+          "因为任务没少，频率低了→完成同样工作耗时更长→用户态更久占着 CPU→调度延迟变大→交互卡顿。而且降频可能触发 C-state 退出延迟叠加。所以 governor 不能降太狠，schedutil 会预留余量。发热是『性能余量被 thermal 吃掉』的表现。",
+      },
+      {
+        user: "有没有办法既凉快又不卡？",
+        assistant:
+          "组合拳：1) 用 schedutil 让频率紧跟负载；2) 任务调度尽量集中在少数核（其余进深 C-state 省电）；3) 热点任务限频但不限太多；4) 改善散热/减少热点（任务迁移）；5) EAS（能效感知调度）在大小核间按能效挑核。核心是别让 thermal 被动硬降频，提前主动平衡。",
+      },
+    ],
+  },
+
+  // ─── 话题 11：块设备 IO 调度 ────────────────────────────
+  {
+    name: "disk_io_scheduler",
+    title: "块设备 IO 调度器",
+    context: "数据库负载下磁盘 IO 延迟抖动大",
+    qa: {
+      question: "IO 调度器为什么需要重排请求？",
+      keywords: ["电梯算法", "deadline", "CFQ", "随机IO", "合并"],
+    },
+    rounds: [
+      {
+        user: "数据库负载下磁盘 IO 延迟抖动很大，IO 调度器为什么需要重排请求？",
+        assistant:
+          "机械盘随机寻道代价极高，乱序提交会反复寻道。IO 调度器把临近的块请求排序/合并，让磁头单向移动（类似电梯算法），把随机 IO 变成顺序 IO，吞吐翻倍。SSD 寻道无代价但仍能从合并和批处理受益，只是策略不同。",
+      },
+      {
+        user: "电梯算法具体怎么排？",
+        assistant:
+          "elevator（电梯）算法：维护按扇区号排序的队列，磁头从低到高服务，到顶再折返。新请求插入到排序位置。这样磁头不来回跳。但纯电梯可能让远端请求饿死，于是演化出 deadline——给每个请求加到期时间，到期强制插队，保证公平性。",
+      },
+      {
+        user: "deadline 调度器怎么防止饿死？",
+        assistant:
+          "deadline 维护两个队列：按扇区排序的电梯队列 + 按超时排序的读写 deadline 队列。正常走电梯队列优化吞吐；一旦某请求超过 deadline（读默认 500ms、写 5s），就优先从 deadline 队列取，防止远端请求永远排不到。读 deadline 更短因为应用常同步等读。",
+      },
+      {
+        user: "CFQ 是什么？现在还用吗？",
+        assistant:
+          "CFQ（完全公平队列）按进程分配时间片做公平调度，适合桌面多任务。但数据库/SSD 场景下开销大、延迟不稳。现代内核已弃用 CFQ，改为 BFQ（块层公平队列，更细粒度、对低吞吐设备好）和 none（SSD 上常直接关调度，交给设备自身队列）。",
+      },
+      {
+        user: "请求合并（merge）发生在哪一步？",
+        assistant:
+          "在 block layer 的堆叠里：相邻扇区的请求先被合并成一个更大 bio/request（减少提交次数）；再做排序。front merge（接在前一个请求前面）和 back merge（接在后面）都支持。合并能显著降低单次 IO 开销，是调度器收益的重要来源。",
+      },
+      {
+        user: "那我的数据库该用哪个调度器？",
+        assistant:
+          "SSD/NVMe 上用 none（mq-deadline 也行），让设备原生队列发挥；机械盘上用 mq-deadline 保延迟、防饿死；单用户低吞吐设备（U 盘）用 BFQ 保交互。数据库重随机 IO，关键是调大队列深度 + 用 deadline/none，别用 CFQ 那种公平但抖动的。",
+      },
+    ],
+  },
+];
+
+/** 话题总数（用于矩阵上限校验） */
+export const TOPIC_COUNT = TOPICS.length;

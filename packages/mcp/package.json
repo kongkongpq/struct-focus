@@ -1,0 +1,18 @@
+{
+  "name": "@struct/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "StructAgent 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）",
+  "bin": {
+    "struct-context-mcp": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "start": "node --experimental-strip-types ./src/index.ts"
+  },
+  "dependencies": {
+    "@struct/context": "workspace:*"
+  },
+  "license": "MIT"
+}

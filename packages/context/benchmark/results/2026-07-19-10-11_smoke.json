@@ -1,0 +1,148 @@
+{
+  "meta": {
+    "date": "2026/7/19 18:11:28",
+    "model": "mock (确定性回退)",
+    "mode": "smoke",
+    "windowTokens": 6000,
+    "configs": [
+      {
+        "rounds": 20,
+        "topics": 4,
+        "repeat": 1
+      }
+    ],
+    "sweep": false
+  },
+  "aggregate": {
+    "lines": {
+      "A": {
+        "avgRecall": 1,
+        "stdRecall": 0,
+        "avgTTFT": 0,
+        "avgTokens": 875,
+        "samples": 1
+      },
+      "B": {
+        "avgRecall": 1,
+        "stdRecall": 0,
+        "avgTTFT": 0,
+        "avgTokens": 875,
+        "samples": 1
+      },
+      "C": {
+        "avgRecall": 0.8,
+        "stdRecall": 0,
+        "avgTTFT": 0,
+        "avgTokens": 212,
+        "samples": 1
+      }
+    },
+    "byLength": [
+      {
+        "rounds": 20,
+        "A": 1,
+        "B": 1,
+        "C": 0.8
+      }
+    ],
+    "byTopic": [
+      {
+        "topic": "process_scheduler",
+        "A": 1,
+        "B": 1,
+        "C": 0.8
+      }
+    ],
+    "avgCompression": 0.03825857519788918,
+    "totalTokens": {
+      "A": 875,
+      "B": 875,
+      "C": 212
+    }
+  },
+  "trials": [
+    {
+      "config": {
+        "rounds": 20,
+        "topics": 4,
+        "repeat": 1
+      },
+      "topicOrder": [
+        "process_scheduler",
+        "memory_allocator",
+        "network_stack",
+        "filesystem_journal"
+      ],
+      "targetTopicIndex": 0,
+      "targetTopic": "process_scheduler",
+      "finalQuestion": "调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+      "keywords": [
+        "O(n)",
+        "链表",
+        "二叉堆",
+        "log n",
+        "遍历"
+      ],
+      "A": {
+        "line": "A",
+        "question": "调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+        "keywords": [
+          "O(n)",
+          "链表",
+          "二叉堆",
+          "log n",
+          "遍历"
+        ],
+        "answer": "【mock 回显】根据上下文：\n我们在用 Rust 写 OS 内核，进程调度器高负载下延迟从 2ms 飙升到 80ms，有什么建议？\n40 倍的退化。先查三点：1) 调度器数据结构——链表 O(n) 还是红黑树？2) 内核是否有长时间禁抢占的临界区？3) CPU-bound 进程是否饥饿了 I/O-bound？发你的 scheduler.rs 看看。\n用链表遍历 O(n) 找最高优先级，进程约 200 个。抢占是关中断实现的，临界区最大 15μs。\nO(n) 遍历 200 进程是主因。每次调度扫描全部，开销太高。换成二叉堆 BinaryHeap，O(log n) 插入/弹出。Linux CFS 用红黑树，但你的规模二叉堆够用且更简单。\n二叉堆写好了，延迟恢复到 ~5ms。但 iowait 时 CPU 利用率只有 30%，调度器在空转。\n经典问题——无进程可运行时调度器在 idle loop spin。需要 WFI(ARM) 或 HLT(x86) 让 CPU 进低功耗等中断。实现 idle task：runqueue 为空时切到 idle task → 执行 hlt → 中断处理程序 enqueue 新进程时唤醒。\nidle task 加了，CPU 功耗降 40%。想加多核 SMP，调度器怎么设计？\nSMP 四要素：1) Per-CPU runqueue 避免全局锁；2) 负载均衡每 tick/idle 迁移任务；3) CPU 亲和性保持缓存热度；4) IPI 核间中断。先做 per-CPU runqueue + 简单 push/pull。\nper-CPU runqueue 写一半，CPU0 持自己锁想偷 CPU1 的任务，CPU1 也在偷 CPU0，死锁了。\n经典 ABBA 死锁。标准解法：按 CPU id 排序加锁——先锁编号小的 runqueue。或 try_lock 偷失败就跳过。Linux 的做法是 work-stealing 单向——idle CPU 主动从 busiest CPU 拿。方案 1 最直接。\nbuddy allocator 分配 64 页连续内存经常失败，外部碎片严重，怎么解？\nBuddy 在大块分配时碎片是主要痛点。两个方向：1) 用分页+MMU 映射，进程看到连续虚拟地址但物理页不需要连续；2) 若必须物理连续，加 memory compaction 移动已分配页。\n方案 1 具体怎么做？我现在虚拟地址和物理页是 1:1 直接映射。\n建议实现页表映射：建立多级页表，让 buddy 只分配 order 0-3 的小块物理页，MMU 把这些不连续的物理页映射到一段连续的虚拟地址。这样上层完全感知不到物理不连续。\n多级页表用几级？我是 64 位架构，48 位虚拟地址。\n48 位虚拟地址通常用 4 级页表（每级 9 位 + 12 位页内偏移）。页表项 PTE 里放物理页帧号 + 权限位。TLB 未命中时由 MMU 硬件遍历页表。记得刷新 TLB（invlpg）再切换映射。\n页表加上了，连续虚拟地址能分配了。但物理页还是不够，compaction 怎么做？\nmemory compaction 的核心：把已分配的物理页尽量搬到低端，腾出连续的空闲区。难点是正在使用的页要先迁移内容再更新所有引用它的页表项。可以先只 compaction 可移动的页（用户态页），跳过内核 pinned 页。\ncompaction 时怎么保证不破坏正在访问的页？\n标准做法：1) 先暂停相关 CPU 的调度（或靠 RCU）；2) 复制旧物理页内容到新物理页；3) 用内存屏障保证复制完成；4) 原子切换页表项指向新物理页；5) 释放旧物理页。期间用 per-CPU 的迁移队列避免竞争。\n我在写用户态 TCP/IP 协议栈，TCP 重传超时怎么算才对？\n经典算法：维护平滑 RTT（SRTT）和 RTT 方差（RTTVAR），RTO = SRTT + 4*RTTVAR。初始 RTO 建议 1s，重传后指数退避（翻倍），直到收到确认。\nSRTT 和 RTTVAR 具体怎么更新？\n每收到一个带时间戳的 ACK：SampleRTT = 现在 - 发送时。SRTT = (1-α)*SRTT + α*SampleRTT（α=1/8）；RTTVAR = (1-β)*RTTVAR + β*|SampleRTT - SRTT|（β=1/4）。RTO = SRTT + 4*RTTVAR，下限 200ms 上限 60s。\n问题来了：重传的那段又收到 ACK，不知道这 ACK 是确认初传还是重传，RTT 算错怎么办？\n这就是 Karn 算法要解决的：重传的报文段不参与 RTT 采样（Karn 算法）。只有未重传的报文段才用其 SampleRTT 更新 SRTT/RTTVAR。超时重传时 RTO 直接指数退避，不采样。\n重传的超时退避上限是多少？一直翻倍不行吧。\n重传时 RTO = min(RTO * 2, RTO_MAX)，RTO_MAX 一般 60s。退避防止风暴。一旦收到新数据 ACK，RTO 复位回 SRTT+4*RTTVAR（撤销退避）。Karn 算法配合退避，避免持续高估 RTO。\n快速重传（fast retransmit）和超时重传怎么配合？\n超时重传是兜底（RTO 触发，指数退避）。快速重传是收到 3 个重复 ACK 立即重传丢失段，不等超时，RTO 不退避。两者并存：dup ACK 路径快速恢复，超时路径保证最终可靠。\n想给内核加一个日志文件系统，核心组件有哪些？\n五大件：1) superblock 存全局元数据；2) journal（日志区）记录未提交事务；3) inode/block bitmap 管理空间；4) checkpoint 机制把日志落盘到主结构；5) 崩溃恢复重放日志。本质是 WAL（Write-Ahead Logging）思想。\nsuperblock 坏了整个文件系统就挂了，怎么保护？\n超级块做冗余：主 superblock 放固定位置，再写几个备份 superblock 到不同块组（参考 ext 的稀疏备份）。挂载时校验校验和，主损坏就读备份。关键字段（魔数、块数、状态位）加 CRC32。\njournal 写提交事务的具体流程？\nWAL 三步：1) 把待改的元数据块写入 journal 的『事务体』；2) 写 commit 记录（带校验和）标记事务完成；3) 后台 checkpoint 把 journal 内容刷到主文件系统。只有 commit 落盘后，事务才算持久，崩溃可从 journal 重放。\n崩溃后怎么恢复？从重头扫 journal 吗？\n崩溃恢复：从 journal 头部扫事务，找到最后一个完整 commit 的事务，重放它之后的所有已提交事务（redo）。未提交的不重放。重放完做 checkpoint 把脏块写回主结构，然后截断 journal。WAL 保证要么全做要么不做。\ncheckpoint 太频繁影响性能，怎么权衡？\ncheckpoint 频率是吞吐 vs 恢复时间的权衡：高频→恢复快但写放大；低频→性能好但崩溃后要重放更多。折中：按 journal 占用率触发（如 50% 满强制 checkpoint），再配合定期的定时 checkpoint（如每 5s）。\n调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+        "hits": 5,
+        "total": 5,
+        "recall": 1,
+        "ttft": 0,
+        "promptTokens": 875,
+        "targetTopic": "process_scheduler",
+        "capsuleTokens": 0,
+        "originalTokens": 0
+      },
+      "B": {
+        "line": "B",
+        "question": "调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+        "keywords": [
+          "O(n)",
+          "链表",
+          "二叉堆",
+          "log n",
+          "遍历"
+        ],
+        "answer": "【mock 回显】根据上下文：\n我们在用 Rust 写 OS 内核，进程调度器高负载下延迟从 2ms 飙升到 80ms，有什么建议？\n40 倍的退化。先查三点：1) 调度器数据结构——链表 O(n) 还是红黑树？2) 内核是否有长时间禁抢占的临界区？3) CPU-bound 进程是否饥饿了 I/O-bound？发你的 scheduler.rs 看看。\n用链表遍历 O(n) 找最高优先级，进程约 200 个。抢占是关中断实现的，临界区最大 15μs。\nO(n) 遍历 200 进程是主因。每次调度扫描全部，开销太高。换成二叉堆 BinaryHeap，O(log n) 插入/弹出。Linux CFS 用红黑树，但你的规模二叉堆够用且更简单。\n二叉堆写好了，延迟恢复到 ~5ms。但 iowait 时 CPU 利用率只有 30%，调度器在空转。\n经典问题——无进程可运行时调度器在 idle loop spin。需要 WFI(ARM) 或 HLT(x86) 让 CPU 进低功耗等中断。实现 idle task：runqueue 为空时切到 idle task → 执行 hlt → 中断处理程序 enqueue 新进程时唤醒。\nidle task 加了，CPU 功耗降 40%。想加多核 SMP，调度器怎么设计？\nSMP 四要素：1) Per-CPU runqueue 避免全局锁；2) 负载均衡每 tick/idle 迁移任务；3) CPU 亲和性保持缓存热度；4) IPI 核间中断。先做 per-CPU runqueue + 简单 push/pull。\nper-CPU runqueue 写一半，CPU0 持自己锁想偷 CPU1 的任务，CPU1 也在偷 CPU0，死锁了。\n经典 ABBA 死锁。标准解法：按 CPU id 排序加锁——先锁编号小的 runqueue。或 try_lock 偷失败就跳过。Linux 的做法是 work-stealing 单向——idle CPU 主动从 busiest CPU 拿。方案 1 最直接。\nbuddy allocator 分配 64 页连续内存经常失败，外部碎片严重，怎么解？\nBuddy 在大块分配时碎片是主要痛点。两个方向：1) 用分页+MMU 映射，进程看到连续虚拟地址但物理页不需要连续；2) 若必须物理连续，加 memory compaction 移动已分配页。\n方案 1 具体怎么做？我现在虚拟地址和物理页是 1:1 直接映射。\n建议实现页表映射：建立多级页表，让 buddy 只分配 order 0-3 的小块物理页，MMU 把这些不连续的物理页映射到一段连续的虚拟地址。这样上层完全感知不到物理不连续。\n多级页表用几级？我是 64 位架构，48 位虚拟地址。\n48 位虚拟地址通常用 4 级页表（每级 9 位 + 12 位页内偏移）。页表项 PTE 里放物理页帧号 + 权限位。TLB 未命中时由 MMU 硬件遍历页表。记得刷新 TLB（invlpg）再切换映射。\n页表加上了，连续虚拟地址能分配了。但物理页还是不够，compaction 怎么做？\nmemory compaction 的核心：把已分配的物理页尽量搬到低端，腾出连续的空闲区。难点是正在使用的页要先迁移内容再更新所有引用它的页表项。可以先只 compaction 可移动的页（用户态页），跳过内核 pinned 页。\ncompaction 时怎么保证不破坏正在访问的页？\n标准做法：1) 先暂停相关 CPU 的调度（或靠 RCU）；2) 复制旧物理页内容到新物理页；3) 用内存屏障保证复制完成；4) 原子切换页表项指向新物理页；5) 释放旧物理页。期间用 per-CPU 的迁移队列避免竞争。\n我在写用户态 TCP/IP 协议栈，TCP 重传超时怎么算才对？\n经典算法：维护平滑 RTT（SRTT）和 RTT 方差（RTTVAR），RTO = SRTT + 4*RTTVAR。初始 RTO 建议 1s，重传后指数退避（翻倍），直到收到确认。\nSRTT 和 RTTVAR 具体怎么更新？\n每收到一个带时间戳的 ACK：SampleRTT = 现在 - 发送时。SRTT = (1-α)*SRTT + α*SampleRTT（α=1/8）；RTTVAR = (1-β)*RTTVAR + β*|SampleRTT - SRTT|（β=1/4）。RTO = SRTT + 4*RTTVAR，下限 200ms 上限 60s。\n问题来了：重传的那段又收到 ACK，不知道这 ACK 是确认初传还是重传，RTT 算错怎么办？\n这就是 Karn 算法要解决的：重传的报文段不参与 RTT 采样（Karn 算法）。只有未重传的报文段才用其 SampleRTT 更新 SRTT/RTTVAR。超时重传时 RTO 直接指数退避，不采样。\n重传的超时退避上限是多少？一直翻倍不行吧。\n重传时 RTO = min(RTO * 2, RTO_MAX)，RTO_MAX 一般 60s。退避防止风暴。一旦收到新数据 ACK，RTO 复位回 SRTT+4*RTTVAR（撤销退避）。Karn 算法配合退避，避免持续高估 RTO。\n快速重传（fast retransmit）和超时重传怎么配合？\n超时重传是兜底（RTO 触发，指数退避）。快速重传是收到 3 个重复 ACK 立即重传丢失段，不等超时，RTO 不退避。两者并存：dup ACK 路径快速恢复，超时路径保证最终可靠。\n想给内核加一个日志文件系统，核心组件有哪些？\n五大件：1) superblock 存全局元数据；2) journal（日志区）记录未提交事务；3) inode/block bitmap 管理空间；4) checkpoint 机制把日志落盘到主结构；5) 崩溃恢复重放日志。本质是 WAL（Write-Ahead Logging）思想。\nsuperblock 坏了整个文件系统就挂了，怎么保护？\n超级块做冗余：主 superblock 放固定位置，再写几个备份 superblock 到不同块组（参考 ext 的稀疏备份）。挂载时校验校验和，主损坏就读备份。关键字段（魔数、块数、状态位）加 CRC32。\njournal 写提交事务的具体流程？\nWAL 三步：1) 把待改的元数据块写入 journal 的『事务体』；2) 写 commit 记录（带校验和）标记事务完成；3) 后台 checkpoint 把 journal 内容刷到主文件系统。只有 commit 落盘后，事务才算持久，崩溃可从 journal 重放。\n崩溃后怎么恢复？从重头扫 journal 吗？\n崩溃恢复：从 journal 头部扫事务，找到最后一个完整 commit 的事务，重放它之后的所有已提交事务（redo）。未提交的不重放。重放完做 checkpoint 把脏块写回主结构，然后截断 journal。WAL 保证要么全做要么不做。\ncheckpoint 太频繁影响性能，怎么权衡？\ncheckpoint 频率是吞吐 vs 恢复时间的权衡：高频→恢复快但写放大；低频→性能好但崩溃后要重放更多。折中：按 journal 占用率触发（如 50% 满强制 checkpoint），再配合定期的定时 checkpoint（如每 5s）。\n调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+        "hits": 5,
+        "total": 5,
+        "recall": 1,
+        "ttft": 0,
+        "promptTokens": 875,
+        "targetTopic": "process_scheduler",
+        "capsuleTokens": 0,
+        "originalTokens": 0
+      },
+      "C": {
+        "line": "C",
+        "question": "调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+        "keywords": [
+          "O(n)",
+          "链表",
+          "二叉堆",
+          "log n",
+          "遍历"
+        ],
+        "answer": "【mock 回显】根据上下文：\n以下是从之前对话中召回的相关信息：\n\n📦 相关胶囊 (1):\n  • capsule_benchmark: 子任务 benchmark 的上下文胶囊（2 块）\n    [目标]: 想加多核 SMP，调度器怎么设计？\n[关键发现]: 我们在用 Rust 写 OS 内核，进程调度器高负载下延迟从 2ms 飙升到 80ms，有什么建议？; 40 倍的退化。; 用链表遍历 O(n) 找最高优先级，进程约 200 个。\n[决策]: 二叉堆写好了，延迟恢复到 ~5ms。; 标准做法：1) 先暂停相关 CPU 的调度（或靠 RCU）；2) 复制旧物理页内容到新物理页；3) 用内存屏障保证复制完成；4) 原子切换页表项指向新物理页；5) 释放旧物理页。\n[下一步]: 想加多核 SMP，调度器怎么设计？\n    [目标]: 想给内核加一个日志文件系统，核心组件有哪些？\n[关键发现]: Karn 算法配合退避，避免持续高估 RTO。; checkpoint 频率是吞吐 vs 恢复时间的权衡：高频→恢复快但写放大；低频→性能好但崩溃后要重放更多。\n[决策]: WAL 三步：1) 把待改的元数据块写入 journal 的『事务体』；2) 写 commit 记录（带校验和）标记事务完成；3) 后台 checkpoint 把 journal 内容刷到主文件系统。\n[下一步]: 折中：按 journal 占用率触发（如 50% 满强制 checkpoint），再配合定期的定时 checkpoint（如每 5s）。\n    调用 recall:context(\"capsule_benchmark\") 展开完整记录\n\n\n当前问题：\n调度器延迟从 2ms 飙到 80ms 的原因和解决方案？",
+        "hits": 4,
+        "total": 5,
+        "recall": 0.8,
+        "ttft": 0,
+        "promptTokens": 212,
+        "targetTopic": "process_scheduler",
+        "capsuleTokens": 29,
+        "originalTokens": 758
+      }
+    }
+  ]
+}
