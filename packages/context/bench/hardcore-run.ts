@@ -1,4 +1,4 @@
-// @struct/context — Hardcore v2 Runner
+﻿// @struct/context — Hardcore v2 Runner
 // 750K DocQA + 30-segment temporal Multi-hop + 10-needle semantic-distractor NIAH
 import { writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";

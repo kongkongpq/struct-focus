@@ -1,4 +1,4 @@
-// @struct/context — 验收测试运行入口
+﻿// @struct/context — 验收测试运行入口
 //
 // 用法：
 //   npx tsx packages/context/bench/run-llm.ts

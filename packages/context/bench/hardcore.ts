@@ -1,4 +1,4 @@
-// @struct/context — Hardcore v2: 真正超窗口 DocQA + 时序矛盾 Multi-hop + 语义干扰 NIAH
+﻿// @struct/context — Hardcore v2: 真正超窗口 DocQA + 时序矛盾 Multi-hop + 语义干扰 NIAH
 // GLM-4 128K 上下文专用
 import { ContextManager, type LLMMessage } from "../src/index.js";
 
@@ -169,7 +169,7 @@ export function runHardNIAHSingle(
     } else {
       mgr.appendObservation(noiseLine(i), { source: `noise-${i}`, taskRelevance: 0.75, sourceType: "file_content" });
     }
-    if (i > 0 && i % 30 === 0) mgr.evictEntries(0.25);
+    if (i > 0 && i % 30 === 0) mgr.manage();
     if (i > 0 && i % 60 === 0) mgr.autoManage();
   }
   mgr.appendUser(needle.question);
@@ -178,7 +178,7 @@ export function runHardNIAHSingle(
   return {
     baseline: { messages: bl, stats: { entries: bl.length, tokens: estimateTokens(bl.map(m => m.content).join("")) } },
     managed: { messages: mgr.toMessages("你是技术助手。直接简洁回答。不知道就说不知道。"),
-      stats: { entries: s.activeEntries, tokens: s.totalTokens, evicted: s.evictedEntries, compressed: s.compressedEntries, usePercent: s.usePercent } },
+      stats: { entries: s.activeEntries, tokens: s.totalTokens, downgraded: s.evictedEntries, compressed: s.compressedEntries, usePercent: s.usePercent } },
     groundTruth: { fact: needle.fact, question: needle.question, answer: needle.answer, distractorAnswer: distractor?.answer },
   };
 }
@@ -243,7 +243,7 @@ export function runDocQAHard(
   for (let i = 0; i < chunks.length; i++) {
     mgr.appendObservation(chunks[i]!, { source: `doc-${i}`, taskRelevance: 0.55, sourceType: "file_content" });
     if (i > 0 && i % 80 === 0) {
-      mgr.evictEntries(0.25);
+      mgr.manage();
       mgr.autoManage();
     }
   }
@@ -254,7 +254,7 @@ export function runDocQAHard(
     baseline: { content: baselineContent, tokens: estimateTokens(baselineContent) },
     managed: {
       messages: mgr.toMessages("你是技术文档分析助手。直接简洁回答。不知道就说不知道。"),
-      tokens: s.totalTokens, evicted: s.evictedEntries, usePercent: s.usePercent,
+      tokens: s.totalTokens, downgraded: s.evictedEntries, usePercent: s.usePercent,
     },
   };
 }

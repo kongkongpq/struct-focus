@@ -1,4 +1,4 @@
-// @struct/context — 社区标准对齐验收测试运行入口 (128K 级)
+﻿// @struct/context — 社区标准对齐验收测试运行入口 (128K 级)
 //
 // 环境变量：
 //   LLM_BASE_URL  LLM_API_KEY  LLM_MODEL
@@ -128,7 +128,7 @@ async function main() {
 
     const gap = " ".repeat(Math.max(0, 8 - tag.length));
     console.log(
-      `${icon}${gap} BL:${baseCorrect ? "✓" : "✗"} CM:${managedCorrect ? "✓" : "✗"} (evicted:${result.managed.stats.evicted} use:${result.managed.stats.usePercent}%)`,
+      `${icon}${gap} BL:${baseCorrect ? "✓" : "✗"} CM:${managedCorrect ? "✓" : "✗"} (downgraded:${result.managed.stats.downgraded} use:${result.managed.stats.usePercent}%)`,
     );
 
     niahResults.results.push({
@@ -307,7 +307,7 @@ async function main() {
   console.log(`  Document: ${(largeDoc.length / 1000).toFixed(0)}K chars (~${Math.round(largeDoc.length / 3.5 / 1000)}K tokens)`);
   console.log(`  Answer at: ${((answerPos / largeDoc.length) * 100).toFixed(0)}% depth (≈${Math.round(answerPos / 3.5 / 1000)}K tokens)`);
   console.log(`  Baseline window: ${(docQA.baseline.tokens / 1000).toFixed(1)}K tokens (last ${Math.round(docQA.baseline.tokens / estimateTokens(largeDoc) * 100)}% of doc)`);
-  console.log(`  CM evicted: ${docQA.managed.evicted}, window: ${docQA.managed.usePercent}%`);
+  console.log(`  CM downgraded: ${docQA.managed.downgraded}, window: ${docQA.managed.usePercent}%`);
   process.stdout.write("  Requesting LLM... ");
 
   const baseDocAnswer = await callLLM(cfg, [{ role: "user", content: docQA.baseline.content + "\n\n" + docQuestion }], 200);
@@ -340,7 +340,7 @@ async function main() {
     {
       baselineAnswer: baseDocAnswer,
       managedAnswer: managedDocAnswer,
-      evicted: docQA.managed.evicted,
+      downgraded: docQA.managed.downgraded,
       usePercent: docQA.managed.usePercent,
     },
     cost,

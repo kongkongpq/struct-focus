@@ -1,4 +1,4 @@
-// Headroom vs. ContextManager (CM) vs. Baseline — Same tests, single GLM-4 backend
+﻿// Headroom vs. ContextManager (CM) vs. Baseline — Same tests, single GLM-4 backend
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { ContextManager, type LLMMessage } from "../src/index.js";
 

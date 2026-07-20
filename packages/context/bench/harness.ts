@@ -1,4 +1,4 @@
-// @struct/context — 社区标准对齐验收基准 (128K 级)
+﻿// @struct/context — 社区标准对齐验收基准 (128K 级)
 //
 // 三题对齐社区标准，全量 128K 级别压力测试：
 //   题1 → gkamradt Needle-in-Haystack (github.com/gkamradt/LLMTest_NeedleInAHaystack, 3500+ stars)
@@ -137,7 +137,7 @@ export function runNIAHSingle(
   maxWindow = 100_000,
 ): {
   baseline: { messages: { role: string; content: string }[]; stats: { entries: number; tokens: number } };
-  managed: { messages: LLMMessage[]; stats: { entries: number; tokens: number; evicted: number; compressed: number; usePercent: number } };
+  managed: { messages: LLMMessage[]; stats: { entries: number; tokens: number; downgraded: number; compressed: number; usePercent: number } };
   groundTruth: { needle: string; question: string; answer: string };
 } {
   const { needle, question, answer } = NEEDLES[needleSet]!;
@@ -159,9 +159,9 @@ export function runNIAHSingle(
       taskRelevance: isNeedle ? 0.1 : 0.6,
       sourceType: "file_content",
     });
-    // 每 20 步做一次轻度驱逐
+    // 每 20 步让 manager 做一次降级管理
     if (i > 0 && i % 20 === 0) {
-      mgr.evictEntries(0.25);
+      mgr.manage();
     }
     // 每 50 步触发 autoManage
     if (i > 0 && i % 50 === 0) {
@@ -183,7 +183,7 @@ export function runNIAHSingle(
       stats: {
         entries: s.activeEntries,
         tokens: s.totalTokens,
-        evicted: s.evictedEntries,
+        downgraded: s.evictedEntries,
         compressed: s.compressedEntries,
         usePercent: s.usePercent,
       },
@@ -248,8 +248,8 @@ export async function runLongMemSingle(
     for (const n of sess.noise) {
       mgr.appendObservation(n, { source: "noise", taskRelevance: 0.8, sourceType: "chat" });
     }
-    // 每个会话结束后驱逐低相关性噪音
-    mgr.evictEntries(0.4);
+    // 每个会话结束后做一次降级管理
+    mgr.manage();
   }
 
   // 在提问前 recall 所有相关记忆
@@ -376,7 +376,7 @@ export function runDocQA(
   maxWindow = 100_000,
 ): {
   baseline: { content: string; tokens: number };
-  managed: { messages: LLMMessage[]; tokens: number; evicted: number; usePercent: number };
+  managed: { messages: LLMMessage[]; tokens: number; downgraded: number; usePercent: number };
 } {
   // ── 朴素基线：只取文档末尾（模拟窗口截断） ──
   const approxChars = maxWindow * CHARS_PER_TOKEN;
@@ -397,9 +397,9 @@ export function runDocQA(
   for (let i = 0; i < doc.length; i += CHUNK) {
     const chunk = doc.slice(i, i + CHUNK);
     mgr.appendObservation(chunk, { source: `doc-chunk-${Math.floor(i / CHUNK)}`, taskRelevance: 0.6, sourceType: "file_content" });
-    // 每 10 个 chunk 做一次驱逐
+    // 每 10 个 chunk 做一次降级管理
     if (i > 0 && i % (CHUNK * 10) === 0) {
-      mgr.evictEntries(0.3);
+      mgr.manage();
     }
     // 每 20 chunk 触发 autoManage
     if (i > 0 && i % (CHUNK * 20) === 0) {
@@ -416,7 +416,7 @@ export function runDocQA(
         "你正在分析一个长文档。基于上下文中的信息直接回答问题。如果你不知道答案，请说你不知道。",
       ),
       tokens: s.totalTokens,
-      evicted: s.evictedEntries,
+      downgraded: s.evictedEntries,
       usePercent: s.usePercent,
     },
   };
@@ -470,7 +470,7 @@ export function formatNIAHReport(results: NIAHResults): string {
 export function formatSummaryReport(
   niah: NIAHResults,
   longmem: { sessions: number; baselineAnswer: string; managedAnswer: string; recalledCount: number },
-  docqa: { baselineAnswer: string; managedAnswer: string; evicted: number; usePercent: number },
+  docqa: { baselineAnswer: string; managedAnswer: string; downgraded: number; usePercent: number },
   cost: string,
 ): string {
   const lines: string[] = [];
@@ -495,7 +495,7 @@ export function formatSummaryReport(
   lines.push("");
 
   lines.push("## 3. MemGPT Document QA (Over-Window Analysis)");
-  lines.push(`- Evicted: ${docqa.evicted} entries`);
+  lines.push(`- downgraded: ${docqa.downgraded} entries`);
   lines.push(`- Window usage: ${docqa.usePercent}%`);
   lines.push(`- Baseline answer: ${docqa.baselineAnswer.slice(0, 300)}`);
   lines.push(`- CM answer:       ${docqa.managedAnswer.slice(0, 300)}`);

@@ -1,4 +1,4 @@
-// @struct/context — LLM 驱动的验收基准
+﻿// @struct/context — LLM 驱动的验收基准
 //
 // 测三个场景：
 //   1. Needle-in-Haystack（大海捞针）：噪音中埋关键信息，LLM 能不能找到
@@ -160,7 +160,7 @@ export function runNeedleTask(task: NeedleTask): {
     }
   }
   // 强制一轮管理
-  mgr.evictEntries(0.3);
+  mgr.manage();
   mgr.appendUser(task.question);
   const mgrEntries = mgr.getAllEntries().filter(e => !e.evicted);
   const mgrPeak = mgrEntries.reduce((s, e) => s + e.tokenCount, 0);
@@ -224,7 +224,7 @@ export function runConsistencyTask(task: ConsistencyTask): {
     mgr.appendAssistant(`[在 ${s.file} 中做了相应修改]`);
     // 模拟每步后的 autoManage
     mgr.appendObservation(`✅ ${s.file} 修改完成，测试通过`, { source: s.file });
-    mgr.evictEntries(0.15);
+    mgr.manage();
     if (s.question) {
       mgrQA.push({ step: s.step, question: s.question, contextSize: mgr.getStats().totalTokens });
     }
@@ -283,7 +283,7 @@ export function runEfficiencyTask(task: EfficiencyTask): {
     for (let n = 0; n < task.noisePerStep; n++) {
       mgr.appendObservation(`noise-${i}-${n}: ` + "data ".repeat(20));
     }
-    mgr.evictEntries(0.2);
+    mgr.manage();
     mgrPeak = Math.max(mgrPeak, mgr.getStats().totalTokens);
   }
 
