@@ -1,9 +1,9 @@
 # Struct Agent 代码审查报告
 
-> ⚠️ **架构已重构（说明性横幅）**：本报告于 2026-07-14 撰写，当时仓库为包含 `@structfocus/framework` / `@structfocus/memory` / `@structfocus/harness` / `@structfocus/agent` / `structfocus-app` 的多包架构。此后项目已重构为「上下文中间层」三包结构：`@structfocus/context`（上下文引擎）、`structfocus-app`（Electron 壳）、`@structfocus/mcp`（MCP Server），原 framework / memory / harness / agent 包已删除。下文对 `packages/framework` / `packages/memory` / `packages/harness` / `packages/agent`（如 `structfocus-agent.ts` / `harness.ts` / `llm.ts` / `defs.ts` 等）的路径引用均为**历史记录**，请以当前 `packages/context` / `packages/app` / `packages/mcp` 代码为准。
+> ⚠️ **架构说明**：本报告于 2026-07-14 撰写。当前仓库为 7 包 monorepo：`@struct/context`（核心上下文引擎）、`@struct/agent`、`@struct/framework`、`@struct/harness`、`@struct/memory`、`@struct/mcp`、`struct-app`。项目定位从全栈 agent 框架演进为上下文中间层，原有包因历史原因保留在仓库中，核心活跃开发集中在 `@struct/context`。
 
 > 对标对象：Cursor / Devin / SWE-agent / Aider / OpenHands / Claude Code
-> 审查范围：`E:\Develop\SrcuctAgent` 全仓库（撰写时为 pnpm monorepo 多包架构；现重构为三包）
+> 审查范围：`E:\Develop\SrcuctAgent` 全仓库（pnpm monorepo 7 包架构）
 > 审查日期：2026-07-14
 > 审查口径：**客观、不留情面、以世界领先 coding agent 为基准**
 
