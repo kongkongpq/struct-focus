@@ -111,7 +111,7 @@ async function callTool(
         source: args.source ? String(args.source) : undefined,
         type: (args.type as "user" | "tool" | "observation") ?? "observation",
       });
-      const stats = engine.getStats();
+      const stats = await engine.getStats();
       return textResult(`✓ 已注入。活跃条目 ${stats.activeEntries}，累计注入 ${stats.totalFed} 字符。`);
     }
     case "context_recall": {
@@ -125,7 +125,7 @@ async function callTool(
       return textResult(result.injectText);
     }
     case "context_status": {
-      const stats = engine.getStats();
+      const stats = await engine.getStats();
       const report = {
         totalFed: stats.totalFed,
         totalSummarized: stats.totalSummarized,

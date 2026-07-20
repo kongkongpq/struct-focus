@@ -396,12 +396,13 @@ export class LongContextEngine {
   // ─── 状态查询 ─────────────────────────────────────────
 
   /** 获取引擎统计信息 */
-  getStats(): EngineStats {
+  async getStats(): Promise<EngineStats> {
     const cmStats = this.cm.getStats();
+    const capsules = await this.cm.listCapsules();
     return {
       totalFed: this.totalFed,
       totalSummarized: this.totalSummarized,
-      capsuleCount: (this.cm as any).capsules?.list?.()?.length ?? 0,
+      capsuleCount: capsules.length,
       activeEntries: cmStats.activeEntries,
       storedEntries: cmStats.evictedEntries,
       lastSummarizeAt: this.lastSummarizeAt,
