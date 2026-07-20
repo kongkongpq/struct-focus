@@ -1,6 +1,7 @@
 // @structfocus/context - ContextBuilder 实现
 
-import { type IContextBuilder, type IMemoryProvider, type BuildOptions, type AssembledContext, type Message, type ContextPointer, type ContextSignal, type RetrievedMemory, type PointerPlaceholder, Pipeline, type NamedMiddleware } from "@structfocus/framework";
+import type { IContextBuilder, IMemoryProvider, BuildOptions, AssembledContext, Message, ContextPointer, ContextSignal, RetrievedMemory, PointerPlaceholder } from "./framework-types.js";
+import { Pipeline, type NamedMiddleware } from "./pipeline.js";
 import { PointerRegistry } from "./pointer.js";
 import { BudgetManager } from "./budget.js";
 import { CodeExplorer } from "./explorer.js";

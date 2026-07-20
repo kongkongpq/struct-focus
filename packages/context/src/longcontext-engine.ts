@@ -354,11 +354,43 @@ export class LongContextEngine {
     return result;
   }
 
-  // ─── 清理 ─────────────────────────────────────────────
+  // ─── 清理 / 聚焦 ─────────────────────────────────────
 
   /** 清理上一次召回的注入条目 */
   forgetRecalled(): number {
     return this.cm.forgetScoped();
+  }
+
+  /**
+   * 忘记（卸载）指定上下文。
+   *
+   * 如果 target 看起来像文件路径（含 '.' 或 '/'），按文件路径驱逐；
+   * 否则按条目 ID 驱逐。
+   *
+   * @param target 文件路径 或 条目 ID
+   * @returns 被移除的条目数
+   */
+  forget(target: string): number {
+    // 路径判断：包含 '.' 或 '/' 的文件路径风格
+    if (target.includes("/") || target.includes("\\") || target.includes(".")) {
+      return this.cm.forgetFile(target);
+    }
+    return this.cm.forgetNoise(target) ? 1 : 0;
+  }
+
+  /**
+   * 聚焦指定文件/目录到工作上下文。
+   *
+   * @param filePath 文件或目录路径
+   * @param opts.symbols 关联的焦点符号
+   * @param opts.level L0（元数据，~100t）/ L1（符号大纲，默认）/ L2（完整内容）
+   * @returns 聚焦结果
+   */
+  async focus(
+    filePath: string,
+    opts?: { symbols?: string[]; level?: "L0" | "L1" | "L2" },
+  ): Promise<{ ok: boolean; focused: string[]; output: string }> {
+    return this.cm.focusFile(filePath, opts);
   }
 
   // ─── 状态查询 ─────────────────────────────────────────

@@ -1,6 +1,6 @@
 // @structfocus/context - PointerRegistry（可逆指针注册表）
 
-import type { ContextPointer, Importance, IMemoryProvider } from "@structfocus/framework";
+import type { ContextPointer, Importance, IMemoryProvider } from "./framework-types.js";
 
 export class PointerRegistry {
   private pointers = new Map<string, ContextPointer>();
@@ -47,7 +47,7 @@ export class PointerRegistry {
         return overlap.length / Math.max(pointer.files.length, p.files.length, 1) > 0.5;
       });
       if (dups.length > 0) {
-        const sorted = [pointer, ...dups].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        const sorted = [pointer, ...dups].sort((a, b) => b.timestamp - a.timestamp);
         merged.push(sorted[0]!);
         for (const d of sorted) used.add(d.id);
       } else { merged.push(pointer); used.add(pointer.id); }

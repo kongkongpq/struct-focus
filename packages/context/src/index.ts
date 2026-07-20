@@ -3,6 +3,12 @@
 // 共享类型（含 LLMMessage / ContextEntry / TaskContext / ContextPlacement 等）
 export * from "./types.js";
 
+// 内联的 framework 类型（原 @structfocus/framework 中 context 依赖的类型）
+export * from "./framework-types.js";
+
+// Pipeline 管线（内联自 framework）
+export { Pipeline, type NamedMiddleware, type IPipeline, type PipelineResult } from "./pipeline.js";
+
 // 长上下文引擎（独立，不绑定任何 Agent 框架）
 export {
   LongContextEngine,

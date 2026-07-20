@@ -4,9 +4,7 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "references": [
-    { "path": "../framework" }
-  ],
+  "references": [],
   "include": ["src/**/*.ts"],
   "exclude": ["tests/**", "dist/**"]
 }

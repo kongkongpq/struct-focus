@@ -4,7 +4,8 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { PointerRegistry, BudgetManager, CodeExplorer, ContextBuilder, TOTAL_BUDGET } from "@structfocus/context";
-import { type ContextPointer, type IMemoryProvider, type RetrievedMemory, now } from "@structfocus/framework";
+import { type ContextPointer, type IMemoryProvider, type RetrievedMemory } from "@structfocus/context";
+import { now } from "@structfocus/context";
 
 // ── PointerRegistry ───────────────────────────────────────
 

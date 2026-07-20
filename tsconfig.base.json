@@ -22,16 +22,8 @@
     "verbatimModuleSyntax": false,
     "resolveJsonModule": true,
     "paths": {
-      "@structfocus/framework": ["./packages/framework/src/index.ts"],
-      "@structfocus/framework/*": ["./packages/framework/src/*"],
-      "@structfocus/memory": ["./packages/memory/src/index.ts"],
-      "@structfocus/memory/*": ["./packages/memory/src/*"],
-      "@structfocus/harness": ["./packages/harness/src/index.ts"],
-      "@structfocus/harness/*": ["./packages/harness/src/*"],
       "@structfocus/context": ["./packages/context/src/index.ts"],
-      "@structfocus/context/*": ["./packages/context/src/*"],
-      "structfocus-agent": ["./packages/agent/src/index.ts"],
-      "structfocus-agent/*": ["./packages/agent/src/*"]
+      "@structfocus/context/*": ["./packages/context/src/*"]
     }
   }
 }

@@ -17,8 +17,6 @@
     "test": "vitest run --project context",
     "clean": "rimraf dist *.tsbuildinfo"
   },
-  "dependencies": {
-    "@structfocus/framework": "workspace:*"
-  },
+  "dependencies": {},
   "license": "Apache-2.0"
 }

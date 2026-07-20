@@ -1,6 +1,13 @@
-// @structfocus/framework - Pipeline 类型与实现
+// @structfocus/context — Pipeline（洋葱模型中间件管线）
+//
+// 从 @structfocus/framework/src/pipeline/types.ts 内联。
+// 不依赖外部的 Result 类型，使用内联的 PipelineResult。
 
-import type { Result } from "../types/base.js";
+// ─── 类型定义 ──────────────────────────────────────────────
+
+export type PipelineResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: Error };
 
 /** 中间件：接收上下文 T 和 next，可前置/后置处理 */
 export type NamedMiddleware<T> = {
@@ -13,13 +20,15 @@ export interface IPipeline<T> {
   use(middleware: NamedMiddleware<T>): void;
   remove(name: string): void;
   middlewares(): readonly NamedMiddleware<T>[];
-  run(ctx: T, signal?: AbortSignal): Promise<Result<T, Error>>;
+  run(ctx: T, signal?: AbortSignal): Promise<PipelineResult<T>>;
 }
+
+// ─── 实现 ──────────────────────────────────────────────────
 
 /**
  * 洋葱模型管道：按注册顺序执行，每层可前/后置处理。
  * - 支持 AbortSignal 中止
- * - 单层异常不传播，收集为 Result
+ * - 单层异常不传播，收集为 PipelineResult
  * - 遍历时使用快照副本
  */
 export class Pipeline<T> implements IPipeline<T> {
@@ -37,7 +46,7 @@ export class Pipeline<T> implements IPipeline<T> {
     return [...this.list];
   }
 
-  async run(ctx: T, signal?: AbortSignal): Promise<Result<T, Error>> {
+  async run(ctx: T, signal?: AbortSignal): Promise<PipelineResult<T>> {
     if (signal?.aborted) {
       return { ok: false, error: new Error("Aborted before pipeline") };
     }
