@@ -108,11 +108,28 @@ Step 20: LLM 需要回顾之前的 Redis 方案
   "mcpServers": {
     "struct-context": {
       "command": "npx",
-      "args": ["@struct/mcp-server"]
+      "args": ["@struct/mcp-server"],
+      "env": {
+        "STRUCT_LLM_API_KEY": "sk-xxx",
+        "STRUCT_LLM_BASE_URL": "https://api.deepseek.com/v1",
+        "STRUCT_LLM_MODEL": "deepseek-chat"
+      }
     }
   }
 }
 ```
+
+### LLM 压缩（可选）
+
+引擎概括旧上下文时用 LLM 做语义摘要。不配 Key 也能跑 —— 走确定性回退（头尾截取，免费但粗略）。
+
+三条环境变量，适配任何 OpenAI 兼容 API：
+
+- `STRUCT_LLM_API_KEY` — API Key（必填）
+- `STRUCT_LLM_BASE_URL` — API 地址，默认 `https://api.openai.com/v1`
+- `STRUCT_LLM_MODEL` — 模型名，默认 `gpt-4o-mini`
+
+常见：DeepSeek（¥1/1M token）、智谱 GLM-4-Flash（免费）、Ollama 本地模型。
 
 ## 原则
 

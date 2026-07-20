@@ -84,12 +84,59 @@ const TOOLS: McpTool[] = [
   },
 ];
 
+// ── LLM 配置（压缩用，不配也能跑——走确定性回退） ─────────
+
+function resolveLlmConfig(): { baseUrl: string; apiKey: string; model: string } | null {
+  // 一条环境变量搞定任何 OpenAI 兼容模型：
+  //   STRUCT_LLM_API_KEY  — API Key（必填）
+  //   STRUCT_LLM_BASE_URL — API 地址（选填，默认 https://api.openai.com/v1）
+  //   STRUCT_LLM_MODEL    — 模型名（选填，默认 gpt-4o-mini）
+  // 例：用 DeepSeek → STRUCT_LLM_API_KEY=sk-xxx STRUCT_LLM_BASE_URL=https://api.deepseek.com/v1 STRUCT_LLM_MODEL=deepseek-chat
+  // 例：用智谱   → STRUCT_LLM_API_KEY=xxx STRUCT_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4 STRUCT_LLM_MODEL=glm-4-flash
+  const apiKey = process.env.STRUCT_LLM_API_KEY;
+  if (!apiKey) return null;
+  return {
+    baseUrl: process.env.STRUCT_LLM_BASE_URL ?? "https://api.openai.com/v1",
+    apiKey,
+    model: process.env.STRUCT_LLM_MODEL ?? "gpt-4o-mini",
+  };
+}
+
+function createLlmCall(cfg: { baseUrl: string; apiKey: string; model: string }): (prompt: string) => Promise<string> {
+  const url = `${cfg.baseUrl}/chat/completions`;
+  return async (prompt: string): Promise<string> => {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 400,
+        temperature: 0.2,
+      }),
+    });
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => "");
+      throw new Error(`LLM ${resp.status}: ${errBody.slice(0, 200)}`);
+    }
+    const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
+    return data.choices?.[0]?.message?.content ?? "";
+  };
+}
+
 // ── 引擎单例 ───────────────────────────────────────────────
 
+const llmCfg = resolveLlmConfig();
 const engineOptions: LongContextEngineOptions = {
+  llmCall: llmCfg ? createLlmCall(llmCfg) : undefined,
   logger: undefined,
 };
 const engine = new LongContextEngine(engineOptions);
+
+
 
 // ── 工具调用 ───────────────────────────────────────────────
 
@@ -224,5 +271,13 @@ export function startMcpServer(): void {
 // 作为入口直接运行时启动
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
+  // 启动日志（stderr，不干扰 MCP stdio 协议）
+  if (!process.env.MCP_NO_BANNER) {
+    if (llmCfg) {
+      console.error(`[struct-context] LLM 压缩已启用：${llmCfg.model} @ ${llmCfg.baseUrl}`);
+    } else {
+      console.error("[struct-context] 未检测到 API Key，LLM 压缩走确定性回退（省钱但不准）。设 STRUCT_LLM_API_KEY / DEEPSEEK_API_KEY / ZHIPU_API_KEY 等环境变量启用 AI 摘要。");
+    }
+  }
   startMcpServer();
 }
