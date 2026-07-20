@@ -4,13 +4,13 @@
 
 ---
 
-## 1. StructAgent 的集成边界：一句话说清楚
+## 1. StructFocus 的集成边界：一句话说清楚
 
-StructAgent **不是 Agent 框架**，它是夹在"Agent 框架的 LLM 调用"和"LLM API"之间的**透明代理层**。
+StructFocus **不是 Agent 框架**，它是夹在"Agent 框架的 LLM 调用"和"LLM API"之间的**透明代理层**。
 
 ```
 Before:  Agent Code → buildMessages() → fetch("https://api.openai.com/...")
-After:   Agent Code → buildMessages() → StructAgent.manage() → fetch("https://api.openai.com/...")
+After:   Agent Code → buildMessages() → StructFocus.manage() → fetch("https://api.openai.com/...")
                                               ↑
                                     这里做概括/胶囊/召回/驱逐
 ```
@@ -23,7 +23,7 @@ After:   Agent Code → buildMessages() → StructAgent.manage() → fetch("http
 
 ### 模式一：函数包裹（5 分钟接入）
 
-**适用**：任何自己写 prompt 的 Agent 项目。你把 `messages` 传给 StructAgent，它返回管理后的 `messages`，你再发给 LLM。
+**适用**：任何自己写 prompt 的 Agent 项目。你把 `messages` 传给 StructFocus，它返回管理后的 `messages`，你再发给 LLM。
 
 ```ts
 // 原来
@@ -47,7 +47,7 @@ engine.feed(reply, { type: "observation" });  // 喂入回复
 关键接口：
 
 ```ts
-// StructAgent 暴露
+// StructFocus 暴露
 export interface ContextMiddleware {
   /** 在 LLM 调用前处理 messages */
   preLlmCall(messages: Message[]): Promise<Message[]>;
@@ -62,11 +62,11 @@ export interface ContextMiddleware {
 
 ### 模式三：HTTP Sidecar（最通用但最重）
 
-StructAgent 开一个 localhost HTTP 服务，Agent 框架通过 HTTP 调用。
+StructFocus 开一个 localhost HTTP 服务，Agent 框架通过 HTTP 调用。
 
 ```
-Agent → POST /manage { messages: [...] } → StructAgent → { managed: [...], capsule: {...} }
-Agent → POST /recall { query: "..." }     → StructAgent → { results: [...] }
+Agent → POST /manage { messages: [...] } → StructFocus → { managed: [...], capsule: {...} }
+Agent → POST /recall { query: "..." }     → StructFocus → { results: [...] }
 ```
 
 **适用**：Python Agent、Claude Desktop（无法改源码）、任何非 JS/TS 项目。
@@ -115,7 +115,7 @@ Agent → POST /recall { query: "..." }     → StructAgent → { results: [...]
 
 ```
 1. 一句话（10 秒抓住）
-   → "FIFO 截断在 160 轮后丢 67% 的知识。StructAgent 保留 100%。"
+   → "FIFO 截断在 160 轮后丢 67% 的知识。StructFocus 保留 100%。"
 
 2. 一张图（30 秒理解）
    → benchmark 对比表的截图

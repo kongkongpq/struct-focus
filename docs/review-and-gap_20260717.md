@@ -1,7 +1,7 @@
 # 代码审查 + 学习差距分析
 
 > 日期：2026-07-17
-> 项目：StructAgent 上下文中间层
+> 项目：StructFocus 上下文中间层
 > 审查范围：全仓库 packages/context + packages/mcp
 > 测试：53 tests 全过（7 文件）
 
@@ -51,7 +51,7 @@
 
 5. **全盘扫描性能隐患仍在**：`ContentStore.loadByFile` 和 `CapsuleStore.findByFile` 仍全盘遍历。条目/胶囊多了会慢。需要内存索引。
 
-6. **ContentStore 已有大量历史数据**：`.structagent/content-store/entries/` 下有 400+ JSON 文件（之前的测试运行残留）。生产中需要清理策略。
+6. **ContentStore 已有大量历史数据**：`.structfocus/content-store/entries/` 下有 400+ JSON 文件（之前的测试运行残留）。生产中需要清理策略。
 
 ---
 

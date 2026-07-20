@@ -1,19 +1,24 @@
 {
-  "name": "struct-bridge",
+  "name": "structfocus",
   "version": "0.1.0",
   "private": true,
-  "description": "Struct Bridge - 确定性 AI Coding Agent 底盘",
+  "license": "Apache-2.0",
+  "description": "StructFocus - LLM 上下文注意力管理引擎 (pnpm monorepo)",
   "type": "module",
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b --noEmit",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "clean": "pnpm -r run clean && rimraf node_modules"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@typescript-eslint/parser": "^8.63.0",
     "@types/node": "^22.20.1",
+    "eslint": "^9.39.5",
     "rimraf": "^6.0.1",
     "typescript": "^5.5.4",
     "vitest": "^2.1.8"

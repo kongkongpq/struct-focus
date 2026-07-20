@@ -1,4 +1,4 @@
-// @struct/memory - JSONL 读写引擎
+// @structfocus/memory - JSONL 读写引擎
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";

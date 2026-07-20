@@ -1,4 +1,4 @@
-// @struct/memory - 统一导出
+// @structfocus/memory - 统一导出
 
 export { Memory, type MemoryOptions } from "./memory.js";
 export { JsonlEngine } from "./engine.js";

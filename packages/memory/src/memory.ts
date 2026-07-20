@@ -1,14 +1,6 @@
-// @struct/memory - Memory 核心类（五层记忆 + 侧车语义）
+// @structfocus/memory - Memory 核心类（五层记忆 + 侧车语义）
 
-import type {
-  MemoryRecord,
-  MemoryKind,
-  KnowledgeCapsule,
-  ContextPointer,
-  EnvironmentPackage,
-  RetrievedMemory,
-} from "@struct/framework";
-import { createId, now } from "@struct/framework";
+import { type MemoryRecord, type MemoryKind, type KnowledgeCapsule, type ContextPointer, type EnvironmentPackage, type RetrievedMemory, createId, now } from "@structfocus/framework";
 import { JsonlEngine } from "./engine.js";
 import { CapsuleManager, type CapsuleInput } from "./capsule.js";
 import { PointerManager, type PointerInput } from "./pointer.js";

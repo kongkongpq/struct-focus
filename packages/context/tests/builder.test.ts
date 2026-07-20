@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildContext, type ContextEntry, type TaskContext } from "@struct/context";
+import { buildContext, type ContextEntry, type TaskContext } from "@structfocus/context";
 
 function entry(i: number, type: ContextEntry["type"], content: string, over: Partial<ContextEntry> = {}): ContextEntry {
   return {

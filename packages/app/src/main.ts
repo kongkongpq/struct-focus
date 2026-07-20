@@ -1,4 +1,4 @@
-// struct-app - Electron 主进程（重接为直接驱动 @struct/context 上下文引擎）
+// structfocus-app - Electron 主进程（重接为直接驱动 @structfocus/context 上下文引擎）
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,13 +21,13 @@ async function loadAutoUpdater(): Promise<AppUpdater | null> {
     return null;
   }
 }
-import { ContextManager, TOTAL_BUDGET, BudgetManager, type TaskContext } from "@struct/context";
+import { ContextManager, TOTAL_BUDGET, BudgetManager, type TaskContext } from "@structfocus/context";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = !app.isPackaged;
 
 const SYSTEM_PROMPT =
-  "你是 StructAgent 上下文引擎控制台。本界面用于可视化与驱动注意力管理" +
+  "你是 StructFocus 上下文引擎控制台。本界面用于可视化与驱动注意力管理" +
   "（focus / forget / reflect / 自动接管 / 任务相关性驱逐 / 注意力审计）。";
 
 let win: BrowserWindow | null = null;

@@ -1,4 +1,4 @@
-// @struct/context - 共享基础类型与常量（2026-07-15 新设计 / 2026-07-19 LongContextRecall 扩展）
+// @structfocus/context - 共享基础类型与常量（2026-07-15 新设计 / 2026-07-19 LongContextRecall 扩展）
 //
 // 集中存放 Context Engine 用到的最小类型/函数与阈值常量，无外部依赖。
 // 本文件是设计文档的「权威类型契约」：ContextManager、ContextBuilder、

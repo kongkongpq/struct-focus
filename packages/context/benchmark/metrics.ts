@@ -1,4 +1,4 @@
-// @struct/context — 度量指标与聚合
+// @structfocus/context — 度量指标与聚合
 //
 // 召回率（上下文留存率）：注入给 LLM 的上下文文本中命中 ground-truth 关键词的百分比
 // （确定性，无需 LLM-as-judge）。这是指南 §2/§5 的设计口径——评「信息是否进上下文」，

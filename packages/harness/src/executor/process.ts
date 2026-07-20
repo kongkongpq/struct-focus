@@ -1,10 +1,10 @@
-// @struct/harness - 进程执行器
+// @structfocus/harness - 进程执行器
 
-import { spawn, type ChildProcess, execSync } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { promisify } from "node:util";
-import type { IExecutor, IProcess, ExecResult, ExecOpts } from "@struct/framework";
+import type { IExecutor, IProcess, ExecResult, ExecOpts } from "@structfocus/framework";
 
-const execAsync = promisify(execSync);
+const _execAsync = promisify(execSync);
 
 /**
  * ProcessExecutor：实现 IExecutor。

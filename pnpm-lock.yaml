@@ -23,22 +23,22 @@ importers:
 
   packages/agent:
     dependencies:
-      '@struct/context':
+      '@structfocus/context':
         specifier: workspace:*
         version: link:../context
-      '@struct/framework':
+      '@structfocus/framework':
         specifier: workspace:*
         version: link:../framework
-      '@struct/harness':
+      '@structfocus/harness':
         specifier: workspace:*
         version: link:../harness
-      '@struct/memory':
+      '@structfocus/memory':
         specifier: workspace:*
         version: link:../memory
 
   packages/context:
     dependencies:
-      '@struct/framework':
+      '@structfocus/framework':
         specifier: workspace:*
         version: link:../framework
 
@@ -46,13 +46,13 @@ importers:
 
   packages/harness:
     dependencies:
-      '@struct/framework':
+      '@structfocus/framework':
         specifier: workspace:*
         version: link:../framework
 
   packages/memory:
     dependencies:
-      '@struct/framework':
+      '@structfocus/framework':
         specifier: workspace:*
         version: link:../framework
 

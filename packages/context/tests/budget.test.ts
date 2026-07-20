@@ -6,7 +6,7 @@ import {
   hasTokenEstimator,
   setMaxContextWindow,
   getMaxContextWindow,
-} from "@struct/context";
+} from "@structfocus/context";
 
 describe("BudgetManager", () => {
   it("估算非空文本返回正 token 数", () => {

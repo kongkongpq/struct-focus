@@ -34,7 +34,7 @@ async function callLLM(messages: { role: string; content: string }[], maxTokens 
         body: JSON.stringify({ model: MODEL, messages, temperature: 0, max_tokens: maxTokens }),
       });
       if (!res.ok) {
-        const txt = await res.text().catch(() => "");
+        const _txt = await res.text().catch(() => "");
         if (res.status === 429 && i < 5) { await delayMs((i + 2) * 10000); continue; }
         return `ERR:${res.status}`;
       }
@@ -160,7 +160,7 @@ async function main() {
   const raw = fs.readFileSync(DATA, "utf-8");
   const data = JSON.parse(raw);
 
-  const catNames: Record<number,string> = {1:"Single-hop",2:"Temporal",3:"Multi-hop",4:"Open-domain",5:"Unanswerable"};
+  const _catNames: Record<number,string> = {1:"Single-hop",2:"Temporal",3:"Multi-hop",4:"Open-domain",5:"Unanswerable"};
   let grandBl=0, grandCm=0, grandTotal=0;
   const allResults: any[] = [];
 

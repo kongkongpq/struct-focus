@@ -1,4 +1,4 @@
-﻿// @struct/context — 社区标准对齐验收测试运行入口 (128K 级)
+﻿// @structfocus/context — 社区标准对齐验收测试运行入口 (128K 级)
 //
 // 环境变量：
 //   LLM_BASE_URL  LLM_API_KEY  LLM_MODEL
@@ -13,12 +13,7 @@
 import { writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  callLLM, checkNIAH, runNIAHSingle, runLongMemSingle, runDocQA,
-  generateLargeDoc, injectAnswerAt, formatNIAHReport, formatSummaryReport,
-  estimateTokens,
-  type LLMConfig, type NIAHPair, type NIAHResults, type NIAHResult, type LongMemSession,
-} from "./harness.js";
+import { callLLM, checkNIAH, runNIAHSingle, runLongMemSingle, runDocQA, generateLargeDoc, injectAnswerAt, formatNIAHReport, formatSummaryReport, estimateTokens, type LLMConfig, type NIAHPair, type NIAHResults, type LongMemSession } from "./harness.js";
 
 // ═══════════════════════════════════════════════════════════
 // 配置检测

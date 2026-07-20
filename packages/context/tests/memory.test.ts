@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { InMemoryBackend, tokenizeQuery } from "@struct/context";
+import { InMemoryBackend, tokenizeQuery } from "@structfocus/context";
 
 describe("InMemoryBackend", () => {
   it("add 后 search 命中相关记忆", () => {

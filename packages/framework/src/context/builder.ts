@@ -1,4 +1,4 @@
-// @struct/framework - 上下文构建器接口与契约
+// @structfocus/framework - 上下文构建器接口与契约
 
 import type { ContextPointer } from "../memory/pointer.js";
 

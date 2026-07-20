@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ContextManager, type TaskContext } from "@struct/context";
+import { ContextManager, type TaskContext } from "@structfocus/context";
 
 function fillNoise(m: ContextManager, n: number, size = 200): void {
   for (let i = 0; i < n; i++) {

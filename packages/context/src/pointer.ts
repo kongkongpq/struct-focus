@@ -1,6 +1,6 @@
-// @struct/context - PointerRegistry（可逆指针注册表）
+// @structfocus/context - PointerRegistry（可逆指针注册表）
 
-import type { ContextPointer, Importance, IMemoryProvider } from "@struct/framework";
+import type { ContextPointer, Importance, IMemoryProvider } from "@structfocus/framework";
 
 export class PointerRegistry {
   private pointers = new Map<string, ContextPointer>();

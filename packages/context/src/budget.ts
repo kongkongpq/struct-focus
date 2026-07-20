@@ -1,6 +1,6 @@
-// @struct/context - 预算桶模型
+// @structfocus/context - 预算桶模型
 
-import type { TokenSlice, TokenUsage } from "@struct/framework";
+import type { TokenSlice, TokenUsage } from "@structfocus/framework";
 
 export interface BudgetBucket {
   readonly name: string;

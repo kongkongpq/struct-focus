@@ -1,4 +1,4 @@
-// struct-agent - BYOK LLM 客户端（fetch，支持 DeepSeek/智谱/OpenAI/Ollama）
+// structfocus-agent - BYOK LLM 客户端（fetch，支持 DeepSeek/智谱/OpenAI/Ollama）
 // v2: 修复 tool_calls 解析 + 多轮对话 tool 历史
 
 export interface LLMConfig {

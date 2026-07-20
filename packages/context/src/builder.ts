@@ -1,29 +1,10 @@
-// @struct/context - ContextBuilder 实现
+// @structfocus/context - ContextBuilder 实现
 
-import type {
-  IContextBuilder,
-  IMemoryProvider,
-  BuildOptions,
-  AssembledContext,
-  Message,
-  ContextPointer,
-  ContextSignal,
-  RetrievedMemory,
-  PointerPlaceholder,
-  TokenUsage,
-} from "@struct/framework";
-import { Pipeline, type NamedMiddleware } from "@struct/framework";
+import { type IContextBuilder, type IMemoryProvider, type BuildOptions, type AssembledContext, type Message, type ContextPointer, type ContextSignal, type RetrievedMemory, type PointerPlaceholder, Pipeline, type NamedMiddleware } from "@structfocus/framework";
 import { PointerRegistry } from "./pointer.js";
-import { BudgetManager, TOTAL_BUDGET, FIXED_OVERHEAD } from "./budget.js";
+import { BudgetManager } from "./budget.js";
 import { CodeExplorer } from "./explorer.js";
-import type {
-  ContextEntry,
-  TaskContext,
-  ContextPlacement,
-  LLMMessage,
-  EntryType,
-  CacheControlBreakpoint,
-} from "./types.js";
+import type { ContextEntry, TaskContext, ContextPlacement, LLMMessage, EntryType, CacheControlBreakpoint } from "./types.js";
 
 /** 辅助：创建带 name 的 NamedMiddleware（绕过函数 name 只读限制） */
 function named<T>(name: string, fn: (ctx: T, next: () => Promise<void>) => Promise<void>): NamedMiddleware<T> {
@@ -102,7 +83,7 @@ export class ContextBuilder implements IContextBuilder {
 
   private fixedLayer: NamedMiddleware<BuildContext> = named("fixed", async (ctx: BuildContext, next: () => Promise<void>) => {
       const parts: string[] = [];
-      parts.push("You are a Struct Bridge AI Coding Agent.");
+      parts.push("You are a StructFocus AI Coding Agent.");
       parts.push("Follow the user's instructions precisely.");
 
       // 项目上下文
@@ -190,7 +171,7 @@ export class ContextBuilder implements IContextBuilder {
       }
 
       // 指针占位（将完整内容替换为轻量指针）
-      const allPointers = ctx.pointerRegistry.getAll();
+      const _allPointers = ctx.pointerRegistry.getAll();
       const deduped = ctx.pointerRegistry.deduplicate();
       for (const pointer of deduped) {
         const placeholder: PointerPlaceholder = {

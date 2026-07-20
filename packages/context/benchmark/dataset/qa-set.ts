@@ -1,4 +1,4 @@
-// @struct/context — QA 测试集
+// @structfocus/context — QA 测试集
 //
 // 每个话题 1 道题 + 关键词列表，直接由 TOPICS 派生（单一事实来源）。
 

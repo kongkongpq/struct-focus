@@ -1,4 +1,4 @@
-// @struct/framework - 生命周期状态机
+// @structfocus/framework - 生命周期状态机
 
 export type LifecycleState =
   | "idle"

@@ -1,10 +1,10 @@
-// @struct/context — Benchmark 话题库（12 个预写话题 × 6 轮）
+// @structfocus/context — Benchmark 话题库（12 个预写话题 × 6 轮）
 //
 // 设计：所有对话均为"确定性预写"（非 LLM 生成），避免训练数据污染。
 // 每个话题自带 1 道最终提问 + 命中关键词；benchmark 总是考"第一个话题"
 // （遗忘曲线测试），中间话题是干扰噪声。
 //
-// 关键词的选择原则：尽量出现在对话正文中，且是调用 StructAgent 召回后
+// 关键词的选择原则：尽量出现在对话正文中，且是调用 StructFocus 召回后
 // 能在胶囊摘要里保留的术语（便于确定性回退与真实 LLM 都能命中）。
 
 import type { Topic } from "../types.js";

@@ -10,7 +10,7 @@ import type {
   ToolDef,
   SandboxLevel,
   MemoryRecord,
-} from "@struct/framework";
+} from "@structfocus/framework";
 
 describe("ContextPointer 类型契约", () => {
   it("可构造完整 ContextPointer", () => {
@@ -116,8 +116,8 @@ describe("EnvironmentPackage 类型契约", () => {
   it("可构造完整 EnvironmentPackage", () => {
     const env: EnvironmentPackage = {
       id: "env_001" as any,
-      projectName: "struct-bridge",
-      rootPath: "e:/Develop/SrcuctAgent",
+      projectName: "structfocus",
+      rootPath: "/path/to/repo",
       layers: [
         {
           name: "layer_framework",
@@ -126,7 +126,7 @@ describe("EnvironmentPackage 类型契约", () => {
           keyPatterns: ["EventBus", "PluginManager"],
         },
       ],
-      onboarding: "# Struct Bridge\n框架层...",
+      onboarding: "# StructFocus\n框架层...",
       timestamp: new Date().toISOString() as any,
     };
     expect(env.layers).toHaveLength(1);

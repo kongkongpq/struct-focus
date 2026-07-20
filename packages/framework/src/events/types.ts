@@ -1,6 +1,6 @@
-// @struct/framework - 事件系统类型
+// @structfocus/framework - 事件系统类型
 
-import type { Id } from "../types/base.js";
+
 
 /** 基础事件接口 */
 export interface BaseEvent {

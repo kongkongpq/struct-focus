@@ -1,7 +1,6 @@
-// @struct/memory - 上下文可逆指针管理
+// @structfocus/memory - 上下文可逆指针管理
 
-import type { ContextPointer, Importance, PointerType } from "@struct/framework";
-import { createId, now } from "@struct/framework";
+import { type ContextPointer, type Importance, type PointerType, createId, now } from "@structfocus/framework";
 import { JsonlEngine } from "./engine.js";
 
 export interface PointerInput {

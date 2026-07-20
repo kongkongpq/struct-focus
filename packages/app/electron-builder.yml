@@ -1,4 +1,4 @@
-﻿appId: com.struct-agent.app
+﻿appId: com.structfocus-agent.app
 productName: Struct Agent
 copyright: Copyright © 2026
 
@@ -24,17 +24,17 @@ win:
   target:
     - nsis
     - portable
-  artifactName: StructAgent-${version}-win-${arch}.${ext}
+  artifactName: StructFocus-${version}-win-${arch}.${ext}
 
 nsis:
-  artifactName: StructAgent-Setup-${version}.${ext}
+  artifactName: StructFocus-Setup-${version}.${ext}
   shortcutName: Struct Agent
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
 
 portable:
-  artifactName: StructAgent-${version}-portable.exe
+  artifactName: StructFocus-${version}-portable.exe
 
 # ── macOS ──
 mac:
@@ -42,10 +42,10 @@ mac:
     - dmg
     - zip
   category: public.app-category.developer-tools
-  artifactName: StructAgent-${version}-mac-${arch}.${ext}
+  artifactName: StructFocus-${version}-mac-${arch}.${ext}
 
 dmg:
-  artifactName: StructAgent-${version}.dmg
+  artifactName: StructFocus-${version}.dmg
 
 # ── Linux ──
 linux:
@@ -53,12 +53,12 @@ linux:
     - AppImage
     - deb
   category: Development
-  artifactName: StructAgent-${version}-linux-${arch}.${ext}
+  artifactName: StructFocus-${version}-linux-${arch}.${ext}
 
 # ── 自动更新发布（electron-updater + GitHub Releases）──
 # CI 中需设置 GH_TOKEN（拥有 repo 写权限）以推送 Release 与产物。
 publish:
   - provider: github
-    owner: struct-agent
-    repo: struct-agent
+    owner: structfocus-agent
+    repo: structfocus-agent
     releaseType: release

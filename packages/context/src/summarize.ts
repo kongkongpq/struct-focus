@@ -1,4 +1,4 @@
-// @struct/context — 概括到胶囊管线 (2026-07-19)
+// @structfocus/context — 概括到胶囊管线 (2026-07-19)
 //
 // summarizeToCapsule：将上下文内容概括为三层胶囊
 //   L0: ~100 tokens（始终注入活跃窗口，作为指针）
@@ -310,7 +310,7 @@ export async function summarizeToCapsule(
   // Step 5: 生成 l0/l1 分层摘要
   const fileNames = capsule.files.slice(0, 5).join(", ");
   const decisionSummaries = capsule.decisions.map((d) => d.summary).join("; ");
-  const entityNames = entities.slice(0, 10).map((e) => e.name).join(", ");
+  const _entityNames = entities.slice(0, 10).map((e) => e.name).join(", ");
 
   const l0Summary = `📦 ${capsule.id}: ${fileNames || `${input.entries.length} 条上下文`}${decisionSummaries ? ` | 决策: ${decisionSummaries}` : ""}`.slice(0, 150);
 

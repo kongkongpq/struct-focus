@@ -1,4 +1,4 @@
-// @struct/framework - 统一导出（唯一真相源）
+// @structfocus/framework - 统一导出（唯一真相源）
 
 // ── 类型 ──
 export * from "./types/index.js";

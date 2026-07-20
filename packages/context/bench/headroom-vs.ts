@@ -1,6 +1,6 @@
 ﻿// Headroom vs. ContextManager (CM) vs. Baseline — Same tests, single GLM-4 backend
-import { writeFileSync, readFileSync, existsSync } from "node:fs";
-import { ContextManager, type LLMMessage } from "../src/index.js";
+import { writeFileSync } from "node:fs";
+import { ContextManager } from "../src/index.js";
 
 // ═══════════ Config ═══════════
 const GLM_BASE = process.env.LLM_BASE_URL ?? "";
@@ -94,7 +94,7 @@ async function runNIAH() {
         for (let i = 0; i < size; i++) {
           if (i === position) lines.push(`【重要信息】${ndl.fact}`); else lines.push(nl(i));
         }
-        const needlePos = position; // keep for reporting
+        const _needlePos = position; // keep for reporting
         const systemMsg = "你是技术助手。只回答问题，不要引用上下文。";
         const messages = [{ role: "system", content: systemMsg }, { role: "user", content: lines.join("\n") + "\n\n" + ndl.q }];
 
@@ -130,7 +130,7 @@ async function runCM(messages: {role:string;content:string}[], question: string)
     // Find needles (lines with 【重要信息】)
     for (const line of userLines) {
       if (line.startsWith("【重要信息】")) {
-        cm.remember?.(line.slice("【重要信息】".length)) ?? cm.appendObservation?.(line);
+        void (cm.remember?.(line.slice("【重要信息】".length)) ?? cm.appendObservation?.(line));
       } else {
         cm.appendObservation?.(line);
       }

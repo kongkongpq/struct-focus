@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { Memory } from "@struct/memory";
+import { Memory } from "@structfocus/memory";
 
 let tmpDir: string;
 let memory: Memory;
@@ -148,7 +148,7 @@ describe("Memory 胶囊", () => {
     await memory.deprecateCapsule(cap1.id, "outdated");
 
     // cap2 应被联动标为 needs-verify
-    const updated = memory.getCapsule(cap2.id);
+    const _updated = memory.getCapsule(cap2.id);
     // 注意：deprecate append 了一条新记录，旧的还在
     const allCaps = memory.searchCapsules("v2");
     const hasNeedsVerify = allCaps.some((c) => c.status === "needs-verify");
@@ -162,7 +162,7 @@ describe("Memory 胶囊", () => {
       knownLimitations: [], linkedPointers: [], tags: [],
       trigger: "test-pass",
     });
-    const cap2 = await memory.recordCapsule({
+    const _cap2 = await memory.recordCapsule({
       requirement: "v2",
       modifications: [], keyDecisions: [], testResults: [],
       knownLimitations: [], linkedPointers: [], tags: [],

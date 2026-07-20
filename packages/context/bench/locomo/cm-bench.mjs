@@ -10,7 +10,7 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const ctxUrl = pathToFileURL("E:/Develop/SrcuctAgent/packages/context/dist/index.js").href;
 const { ContextManager } = await import(ctxUrl);
 
-const API_KEY = "***REMOVED***.***REMOVED***";
+const API_KEY = process.env.LOCOMO_API_KEY ?? "";
 const API = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 const MODEL = "glm-4-flash";
 const MAX_QA = 15;

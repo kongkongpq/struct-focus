@@ -4,7 +4,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const API_KEY = "***REMOVED***";
+const API_KEY = process.env.LOCOMO_API_KEY ?? "";
 const API = "https://api.deepseek.com/chat/completions";
 const MODEL = "deepseek-chat";
 const MAX_QA = 15; // 15 per convo, 10 convos = 150 total

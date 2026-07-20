@@ -1,7 +1,6 @@
-// @struct/harness - Harness 核心类
+// @structfocus/harness - Harness 核心类
 
-import type { ToolDef, ToolCall, ToolResult } from "@struct/framework";
-import { retry } from "@struct/framework";
+import { type ToolDef, type ToolCall, type ToolResult, retry } from "@structfocus/framework";
 import { Policy } from "./policy.js";
 import { ProcessExecutor } from "./executor/process.js";
 import { AuditLog } from "./audit.js";

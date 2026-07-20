@@ -1,4 +1,4 @@
-// @struct/context - 统一导出
+// @structfocus/context - 统一导出
 
 // 共享类型（含 LLMMessage / ContextEntry / TaskContext / ContextPlacement 等）
 export * from "./types.js";
@@ -49,6 +49,6 @@ export {
 } from "./budget.js";
 export { CodeExplorer, type FileInfo, type SymbolInfo } from "./explorer.js";
 
-// 集成契约（框架无关，StructAgent 自身暴露）
+// 集成契约（框架无关，StructFocus 自身暴露）
 export { createContextMiddleware } from "./middleware.js";
 export type { ContextMiddleware, ContextMiddlewareOptions } from "./middleware.js";

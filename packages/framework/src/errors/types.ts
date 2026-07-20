@@ -1,6 +1,6 @@
-// @struct/framework - 统一错误模型
+// @structfocus/framework - 统一错误模型
 
-import type { Id } from "../types/base.js";
+
 
 export type ErrorCode =
   | "UNKNOWN"

@@ -1,6 +1,6 @@
-// @struct/harness - 33 个工具定义
+// @structfocus/harness - 33 个工具定义
 
-import type { ToolDef } from "@struct/framework";
+import type { ToolDef } from "@structfocus/framework";
 
 export const FS_TOOLS: readonly ToolDef[] = [
   { name: "file_read", description: "读取文件内容", category: "fs", params: [{ name: "path", type: "string", description: "文件路径", required: true }], risk: "safe", disableable: false, enabledByDefault: true },

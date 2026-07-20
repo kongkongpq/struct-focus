@@ -1,4 +1,4 @@
-# StructAgent v5.1 综合评估报告
+# StructFocus v5.1 综合评估报告
 
 > 日期：2026-07-15 ｜ 评估人：QClaw AI
 > 前序报告：v4 评估（8.2/10）、v5 评估（7.8/10 → 修正为 8.3/10）、架构优化分析
@@ -29,9 +29,9 @@ v5 → v5.1 的关键进步：
 ### 1.1 包结构
 | 包 | 名称 | 源文件 | 测试文件 | 状态 |
 |---|---|---|---|---|
-| context | @struct/context | 12 | 15 (80 tests) | ✅ 核心包 |
-| mcp | @struct/mcp | 1 | 0 | ✅ MCP Server |
-| app | struct-app | 2 | 0 | ⚠️ Electron 壳 |
+| context | @structfocus/context | 12 | 15 (80 tests) | ✅ 核心包 |
+| mcp | @structfocus/mcp | 1 | 0 | ✅ MCP Server |
+| app | structfocus-app | 2 | 0 | ⚠️ Electron 壳 |
 
 ### 1.2 关键文件清单
 
@@ -199,7 +199,7 @@ vitest run      → 15 files / 80 tests / all passed ✅ (1.97s)
 
 ## 5. 对标竞品（简要）
 
-| 能力 | StructAgent v5.1 | OpenHands | SWE-agent | Aider | Claude Code |
+| 能力 | StructFocus v5.1 | OpenHands | SWE-agent | Aider | Claude Code |
 |---|---|---|---|---|---|
 | 上下文版本化 | ✅ Git 模型 | ❌ 事件溯源 | ❌ | ❌ | ❌ |
 | 主动注意力管理 | ✅ 三层 + 审计 | ❌ | ❌ | ❌ | ❌ |
@@ -210,7 +210,7 @@ vitest run      → 15 files / 80 tests / all passed ✅ (1.97s)
 | 工具并行 | ❌ | ✅ | ❌ | ❌ | ✅ |
 | MCP 接入 | ✅ | ❌ | ❌ | ❌ | ❌ |
 
-**差异化卖点**：唯一以「上下文中间件」定位的包，其他竞品都是完整 Agent。StructAgent 的价值在于**可被任何 Agent 接入的上下文管理能力**——Git 版本化 + 主动注意力 + 记忆 + MCP 协议。
+**差异化卖点**：唯一以「上下文中间件」定位的包，其他竞品都是完整 Agent。StructFocus 的价值在于**可被任何 Agent 接入的上下文管理能力**——Git 版本化 + 主动注意力 + 记忆 + MCP 协议。
 
 ---
 
@@ -258,7 +258,7 @@ vitest run      → 15 files / 80 tests / all passed ✅ (1.97s)
 
 ## 8. 最终评价
 
-StructAgent v5.1 的**架构骨架一流**——哈佛架构 + 主动注意力 + Git 版本化 + MCP 接入的组合在同类项目中独一无二。核心能力（六原语、三层管理、记忆、验证、阶段）已全部落地，80 测试全过，tsc 干净。
+StructFocus v5.1 的**架构骨架一流**——哈佛架构 + 主动注意力 + Git 版本化 + MCP 接入的组合在同类项目中独一无二。核心能力（六原语、三层管理、记忆、验证、阶段）已全部落地，80 测试全过，tsc 干净。
 
 **但大量被命名的能力未真正兑现**：预算桶模型是死代码、PointerRegistry 是死代码、summarizer 仅注入点无默认实现、fork/merge 无集成测试、序列化/恢复缺失、MCP 无多会话。
 

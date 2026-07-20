@@ -1,4 +1,4 @@
-// @struct/framework - 类型地基：Branded ID / Result / Json / Timestamp
+// @structfocus/framework - 类型地基：Branded ID / Result / Json / Timestamp
 
 // ─── Branded ID ──────────────────────────────────────────────
 

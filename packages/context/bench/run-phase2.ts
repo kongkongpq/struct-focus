@@ -1,4 +1,4 @@
-﻿// @struct/context — Phase 2 only: DocQA + Multi-hop (skip NIAH)
+﻿// @structfocus/context — Phase 2 only: DocQA + Multi-hop (skip NIAH)
 import * as hc from "./hardcore.js";
 
 const cfg = {

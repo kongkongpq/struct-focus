@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// test-zhipu.mjs - 直接测试 StructAgent + 智谱 GLM-4
+// test-zhipu.mjs - 直接测试 StructFocus + 智谱 GLM-4
 // 用法: node test-zhipu.mjs [工作目录]
 
 import * as path from "node:path";
@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // 动态导入编译后的模块
-const { StructAgent } = await import("../dist/agent/index.js");
+const { StructFocus } = await import("../dist/agent/index.js");
 
 const cwd = process.argv[2] ?? process.cwd();
 const model = process.env["STRUCT_MODEL"] ?? "glm-4-flash";
@@ -21,7 +21,7 @@ Provider: zhipu
 ═══════════════════════════════
 `);
 
-const agent = new StructAgent({
+const agent = new StructFocus({
   cwd,
   llm: {
     provider: "zhipu",

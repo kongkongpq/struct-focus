@@ -1,4 +1,4 @@
-# StructAgent 路线对照验收报告（Phase 0 + Phase 1）
+# StructFocus 路线对照验收报告（Phase 0 + Phase 1）
 
 > 日期：2026-07-15
 > 对照文档：`docs/CONTEXT_MIDDLEWARE_STRATEGY.md`（上下限高发展路线）
@@ -93,6 +93,6 @@
 现在 Phase 0 + Phase 1 全部验收通过，可以启动 Phase 2：
 
 ### Phase 2 — 开源 SDK + 私有化 License
-- P2-1 开源 Core SDK（Apache-2.0）：`@structagent/context` npm 包
+- P2-1 开源 Core SDK（Apache-2.0）：`@structfocus/context` npm 包
 - P2-2 商业版：trace 回放、注意力浪费看板、成本分析
 - P2-3 私有化 License：金融/政企数据不出域

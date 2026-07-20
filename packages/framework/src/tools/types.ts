@@ -1,4 +1,4 @@
-// @struct/framework - 工具类型定义
+// @structfocus/framework - 工具类型定义
 
 export type ToolCategory =
   | "fs"

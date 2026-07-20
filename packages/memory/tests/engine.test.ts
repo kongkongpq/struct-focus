@@ -1,11 +1,10 @@
 // memory 测试套件 - JSONL 引擎 + 记录 + 搜索 + 损坏恢复
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { JsonlEngine } from "@struct/memory";
-import type { MemoryRecord } from "@struct/framework";
-import { createId, now } from "@struct/framework";
+import { JsonlEngine } from "@structfocus/memory";
+import { type MemoryRecord, createId, now } from "@structfocus/framework";
 
 let tmpDir: string;
 

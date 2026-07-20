@@ -1,4 +1,4 @@
-// @struct/framework - Pipeline 类型与实现
+// @structfocus/framework - Pipeline 类型与实现
 
 import type { Result } from "../types/base.js";
 

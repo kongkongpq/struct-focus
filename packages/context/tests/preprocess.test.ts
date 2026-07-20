@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ContextManager } from "@struct/context";
+import { ContextManager } from "@structfocus/context";
 
 function mk(): ContextManager {
   return new ContextManager({ maxWindow: 200_000 });

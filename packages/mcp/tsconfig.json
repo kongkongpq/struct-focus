@@ -12,7 +12,7 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "paths": {
-      "@struct/context": ["../context/src/index.ts"]
+      "@structfocus/context": ["../context/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"]

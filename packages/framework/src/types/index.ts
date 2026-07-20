@@ -1,4 +1,4 @@
-// @struct/framework - types 重导出
+// @structfocus/framework - types 重导出
 
 export * from "./base.js";
 export * from "../errors/types.js";

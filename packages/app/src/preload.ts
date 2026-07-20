@@ -1,4 +1,4 @@
-// struct-app - Preload（安全的 IPC 桥接，直接驱动 @struct/context 引擎）
+// structfocus-app - Preload（安全的 IPC 桥接，直接驱动 @structfocus/context 引擎）
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("contextAPI", {

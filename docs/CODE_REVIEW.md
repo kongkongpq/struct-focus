@@ -1,6 +1,6 @@
 # Struct Agent 代码审查报告
 
-> ⚠️ **架构已重构（说明性横幅）**：本报告于 2026-07-14 撰写，当时仓库为包含 `@struct/framework` / `@struct/memory` / `@struct/harness` / `@struct/agent` / `struct-app` 的多包架构。此后项目已重构为「上下文中间层」三包结构：`@struct/context`（上下文引擎）、`struct-app`（Electron 壳）、`@struct/mcp`（MCP Server），原 framework / memory / harness / agent 包已删除。下文对 `packages/framework` / `packages/memory` / `packages/harness` / `packages/agent`（如 `struct-agent.ts` / `harness.ts` / `llm.ts` / `defs.ts` 等）的路径引用均为**历史记录**，请以当前 `packages/context` / `packages/app` / `packages/mcp` 代码为准。
+> ⚠️ **架构已重构（说明性横幅）**：本报告于 2026-07-14 撰写，当时仓库为包含 `@structfocus/framework` / `@structfocus/memory` / `@structfocus/harness` / `@structfocus/agent` / `structfocus-app` 的多包架构。此后项目已重构为「上下文中间层」三包结构：`@structfocus/context`（上下文引擎）、`structfocus-app`（Electron 壳）、`@structfocus/mcp`（MCP Server），原 framework / memory / harness / agent 包已删除。下文对 `packages/framework` / `packages/memory` / `packages/harness` / `packages/agent`（如 `structfocus-agent.ts` / `harness.ts` / `llm.ts` / `defs.ts` 等）的路径引用均为**历史记录**，请以当前 `packages/context` / `packages/app` / `packages/mcp` 代码为准。
 
 > 对标对象：Cursor / Devin / SWE-agent / Aider / OpenHands / Claude Code
 > 审查范围：`E:\Develop\SrcuctAgent` 全仓库（撰写时为 pnpm monorepo 多包架构；现重构为三包）
@@ -64,7 +64,7 @@ export const TOTAL_BUDGET = 125000;
 ```
 而 `packages/agent/src/agent/llm.ts` 的 `PROVIDER_DEFAULT_WINDOWS` 中 deepseek 仅 `64000`。
 
-**问题**：`manage()` 的"硬上限"用的是 `TOTAL_BUDGET = 125000`，但模型只能吃 64k。`manage()` 在 125k 之前根本不会驱逐，而 `fitToWindow()`（struct-agent.ts L641）在超限时**仅 `warn` 仍把超窗内容发给模型**——直接触发 API 层 `context_length_exceeded` 报错。
+**问题**：`manage()` 的"硬上限"用的是 `TOTAL_BUDGET = 125000`，但模型只能吃 64k。`manage()` 在 125k 之前根本不会驱逐，而 `fitToWindow()`（structfocus-agent.ts L641）在超限时**仅 `warn` 仍把超窗内容发给模型**——直接触发 API 层 `context_length_exceeded` 报错。
 
 实测验证：预算桶 `dynamic` 限额 110000（budget.ts L16），单这一层就超过多数模型窗口。
 
@@ -143,7 +143,7 @@ async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Prom
 ```
 `fetch(url, init)` 没有传 `AbortSignal`，也没有 `timeout` 选项（Node 的 `fetch` 支持 `signal`）。**如果模型 API 挂起（连接建立但无响应），这个 promise 永远不 reject**，整个 agent 循环卡死，且 `options?.abortSignal` 从上层传下来却**从未接到 fetch 上**。
 
-实测验证：StructAgent.run 的 `abortSignal` 在 L407 检查了，但工具执行与 LLM 调用都没有把 signal 传递下去。
+实测验证：StructFocus.run 的 `abortSignal` 在 L407 检查了，但工具执行与 LLM 调用都没有把 signal 传递下去。
 
 **改进建议**：
 ```ts
@@ -200,7 +200,7 @@ private toolToOperation(tool: string): string | null {
 
 `packages/framework/src/events/bus.ts` `emit()` L50 同步派发并收集同步异常；异步 handler 的 reject 通过 `.catch` 收集进 `errors` 数组。**实测验证**：异步 handler reject 时 `errors.length === 1`（确实被捕获，纠正了我最初的"吞异常"假设）。
 
-但问题在于**语义**：`emit()` 返回 `errors`，可调用方（StructAgent 主循环）并没有检查返回值。即"异常被收集了，但没人看"。遥测、日志等异步订阅者的失败会被静默吞掉，导致"以为打点都成功，实际全丢"。
+但问题在于**语义**：`emit()` 返回 `errors`，可调用方（StructFocus 主循环）并没有检查返回值。即"异常被收集了，但没人看"。遥测、日志等异步订阅者的失败会被静默吞掉，导致"以为打点都成功，实际全丢"。
 
 **改进建议**：`emit()` 对非空 `errors` 至少 `console.error` 或回调一个 onError hook；提供 `emitAsync()` 让调用方 `await` 并显式处理订阅者失败。
 
@@ -292,7 +292,7 @@ spawn(_command: string, _args: string[], _opts: ExecOpts): IProcess {
 
 #### 缺陷 L：单步工具顺序执行，完全无并行 —— 速度瓶颈 🟠
 
-`struct-agent.ts` L406-454：工具循环是 `while (k < response.toolCalls.length)` + `await this.execSingleToolCall(...)`。**每个工具调用都 await 串行**。唯一的"批处理"是连续写操作合并为原子事务（L419-429），但那是事务一致性需求，不是并行加速。
+`structfocus-agent.ts` L406-454：工具循环是 `while (k < response.toolCalls.length)` + `await this.execSingleToolCall(...)`。**每个工具调用都 await 串行**。唯一的"批处理"是连续写操作合并为原子事务（L419-429），但那是事务一致性需求，不是并行加速。
 
 **后果**：模型一次返回 5 个独立只读调用（如读 5 个文件、跑 5 个 code_search），也要串行 5 次。**对标**：Claude Code 对独立只读工具调用并行 dispatch；Cursor 的后台索引更是完全异步。Struct Agent 在长任务里会浪费大量墙钟时间。
 
@@ -303,7 +303,7 @@ spawn(_command: string, _args: string[], _opts: ExecOpts): IProcess {
 
 #### 缺陷 M：dynamic-prompt 的 `filterToolsByPhase` 定义了却没被调用 —— 工具裁剪未生效 🟠
 
-`packages/agent/src/agent/dynamic-prompt.ts` 设计了 `filterToolsByPhase()`（按 explore/plan/execute/verify/summarize 裁剪工具集，减少 function-calling 噪音）。但 `StructAgent` 实际只用 `setDynamicInstruction` 注入了阶段指令（`PHASE_PROMPTS`），**从未调用 `filterToolsByPhase`**。
+`packages/agent/src/agent/dynamic-prompt.ts` 设计了 `filterToolsByPhase()`（按 explore/plan/execute/verify/summarize 裁剪工具集，减少 function-calling 噪音）。但 `StructFocus` 实际只用 `setDynamicInstruction` 注入了阶段指令（`PHASE_PROMPTS`），**从未调用 `filterToolsByPhase`**。
 
 而且代码注释（dynamic-prompt.ts L28-29）自己说"所有工具在任何阶段都可用，否则模型会显得很傻"——**作者主动放弃了工具裁剪**。这与其文件名"动态裁剪"自相矛盾。
 
@@ -315,7 +315,7 @@ spawn(_command: string, _args: string[], _opts: ExecOpts): IProcess {
 
 #### 缺陷 N：遥测默认 no-op，且 OTEL 导出路径未验证 🟡
 
-遥测层（`@struct/framework` 的 OTEL 封装）默认是 no-op 实现。意味着开箱即用时**没有任何运行观测**——无法看 token 消耗曲线、工具耗时、错误率。对"可审计"自称（ARCHITECTURE.md）是落空的：能审计的前提是有数据。
+遥测层（`@structfocus/framework` 的 OTEL 封装）默认是 no-op 实现。意味着开箱即用时**没有任何运行观测**——无法看 token 消耗曲线、工具耗时、错误率。对"可审计"自称（ARCHITECTURE.md）是落空的：能审计的前提是有数据。
 
 **改进建议**：提供本地 JSON / stdout 遥测后端作为默认（而非 no-op），至少把每步 token、工具耗时、错误落盘，让"可审计"名副其实。
 

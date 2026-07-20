@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { Harness, ALL_TOOLS, TOOL_MAP } from "@struct/harness";
+import { Harness } from "@structfocus/harness";
 
 let tmpDir: string;
 let harness: Harness;

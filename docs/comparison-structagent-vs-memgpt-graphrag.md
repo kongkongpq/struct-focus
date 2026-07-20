@@ -1,7 +1,7 @@
-# StructAgent vs MemGPT / Letta vs GraphRAG — 详细对比（重点：测试与评测）
+# StructFocus vs MemGPT / Letta vs GraphRAG — 详细对比（重点：测试与评测）
 
-> 目的：把 StructAgent 放到"长期记忆 / 长上下文"这条赛道里，和它最常被人拿来比的三个系统做一个**有出处、有数字**的对比。
-> 核心结论先说：**这三者其实不在同一个层上竞争**——StructAgent 与 MemGPT/Letta 争的是"agent 运行时记忆"，GraphRAG 争的是"语料级知识问答"。但在 StructAgent 最在意的"长对话会不会忘"这一轴上，三套**测试方法**的差别，比它们的结果更值得讲清楚。
+> 目的：把 StructFocus 放到"长期记忆 / 长上下文"这条赛道里，和它最常被人拿来比的三个系统做一个**有出处、有数字**的对比。
+> 核心结论先说：**这三者其实不在同一个层上竞争**——StructFocus 与 MemGPT/Letta 争的是"agent 运行时记忆"，GraphRAG 争的是"语料级知识问答"。但在 StructFocus 最在意的"长对话会不会忘"这一轴上，三套**测试方法**的差别，比它们的结果更值得讲清楚。
 
 ---
 
@@ -9,17 +9,17 @@
 
 | 系统 | 一句话 | 它解决的是哪一层 |
 |------|--------|------------------|
-| **StructAgent** (`@struct/context`) | 长上下文的"透明代理"：**概括→胶囊→指针→语义召回**，不压缩、不丢、可溯源 | Agent / 对话**运行时**记忆，防 FIFO 截断遗忘 |
+| **StructFocus** (`@structfocus/context`) | 长上下文的"透明代理"：**概括→胶囊→指针→语义召回**，不压缩、不丢、可溯源 | Agent / 对话**运行时**记忆，防 FIFO 截断遗忘 |
 | **MemGPT / Letta** | 把 LLM 当操作系统：主上下文 + 外存，靠 LLM **自主函数调用**分页调度 | 通用 agent **长期 / 跨会话**记忆 |
 | **GraphRAG** (Microsoft) | 把语料建成知识图谱 + 层级社区摘要，专门答"全局性"问题 | **大规模语料**知识问答（语料级，非对话级） |
 
-> 一句话区分：StructAgent = 给对话装一个"不会忘的秘书"；MemGPT = 给 agent 装一套"虚拟内存操作系统"；GraphRAG = 给一堆文档建一棵"能全局总结的知识树"。
+> 一句话区分：StructFocus = 给对话装一个"不会忘的秘书"；MemGPT = 给 agent 装一套"虚拟内存操作系统"；GraphRAG = 给一堆文档建一棵"能全局总结的知识树"。
 
 ---
 
 ## 1. 核心机制对比
 
-### StructAgent — 概括 → 胶囊 → 指针 → 语义召回
+### StructFocus — 概括 → 胶囊 → 指针 → 语义召回
 - **摄入（feed）**：每条消息进 ContentStore，做智能分词（CJK 弱）。
 - **压缩（flush）**：达到阈值后用 LLM（缺失时走**确定性回退** `deterministicSummary`）把若干轮对话压缩成一个**胶囊（capsule）**，胶囊里保留：摘要 + 任务ID + 涉及文件 + **chunkSummaries（块级摘要）**。
 - **指针**：胶囊本身进入上下文，原文留在存储；需要时通过**语义召回（recall）**把原文片段拉回。
@@ -46,17 +46,17 @@
 
 测试哲学的差别，比结果数字更关键：
 
-- **StructAgent** = 工程可量化：**"截断遗忘曲线"**——关键词是否进了上下文 + token 预算占用（最硬、最可复现、最快）。
+- **StructFocus** = 工程可量化：**"截断遗忘曲线"**——关键词是否进了上下文 + token 预算占用（最硬、最可复现、最快）。
 - **MemGPT / Letta** = 行为级：**"记忆是否真能用"**——跨会话事实召回准确率、长期对话榜总分（贴近用户体验，但依赖 LLM judge / 人工，对底座模型敏感）。
 - **GraphRAG** = 质量级：**"全局综合是否全面"**——LLM-as-judge 头对头胜率（主观，但有结构化 claim 指标补充）。
 
-### 2.1 StructAgent 的测试（我们刚搭的 A/B/C 三线对照）
+### 2.1 StructFocus 的测试（我们刚搭的 A/B/C 三线对照）
 
 设计来源：`docs/benchmark-guide.md`，已在 `packages/context/benchmark/` 落地并跑通。
 
 | 项 | 内容 |
 |----|------|
-| **三线设计** | **A = 裸跑（上界）**：全量上下文；**B = FIFO 30K 截断（基线）**：只保留尾部，前端遗忘；**C = StructAgent（被测）**：概括→胶囊→指针→语义召回 |
+| **三线设计** | **A = 裸跑（上界）**：全量上下文；**B = FIFO 30K 截断（基线）**：只保留尾部，前端遗忘；**C = StructFocus（被测）**：概括→胶囊→指针→语义召回 |
 | **数据集** | 12 个预写话题 × 多轮；**目标话题固定在对话最前端**（遗忘曲线：FIFO 保留尾部，越往后越忘最前面的） |
 | **评测指标** | ① 召回率 = 关键词是否进入最终注入上下文的比例；② `token/prompt` 占用；③ 压缩比 = 1 − C_tokens / A_tokens |
 | **两种模式** | **确定性 mock**（无 API Key，LLM 回显 prompt，评分 100% 可复现，用于管线自检）+ **真实 LLM**（需 `GLM_API_KEY`，待跑） |
@@ -71,12 +71,12 @@
 
 原论文四个评测：
 
-| 评测 | 测什么 | 结果（MemGPT vs 基线） | 与 StructAgent 的类比 |
+| 评测 | 测什么 | 结果（MemGPT vs 基线） | 与 StructFocus 的类比 |
 |------|--------|------------------------|------------------------|
-| **Deep Memory Retrieval (DMR)** | 跨 5 个先前会话的事实问答，基线只给有损摘要 | MemGPT+GPT-4 **93.4% acc** / ROUGE-L 0.827，vs GPT-4 基线 **32.1%** / 0.296（**+60pp**）；GPT-4 Turbo 版 93.4% | **最接近 StructAgent 的"遗忘曲线"**——压缩摘要丢细节，分页检索找回 |
-| **Conversation Opener** | 开场白 persona 一致性 | CSIM-1 MemGPT **0.868** vs 人类 **0.800** | 个性化/参与度，StructAgent 未测 |
+| **Deep Memory Retrieval (DMR)** | 跨 5 个先前会话的事实问答，基线只给有损摘要 | MemGPT+GPT-4 **93.4% acc** / ROUGE-L 0.827，vs GPT-4 基线 **32.1%** / 0.296（**+60pp**）；GPT-4 Turbo 版 93.4% | **最接近 StructFocus 的"遗忘曲线"**——压缩摘要丢细节，分页检索找回 |
+| **Conversation Opener** | 开场白 persona 一致性 | CSIM-1 MemGPT **0.868** vs 人类 **0.800** | 个性化/参与度，StructFocus 未测 |
 | **Document QA**（NaturalQuestions-Open） | 随文档数增加，截断基线退化 | MemGPT 稳定（分页=无限上下文），基线随文档增多准确率掉 | 类似"长文档不被窗口限制" |
-| **Nested Key-Value Retrieval** | 多跳（0–4 层嵌套）查找 | 基线 GPT-4 在 3 层 **0%**，MemGPT 维持 **~100%** | 多跳推理，StructAgent 未直接测 |
+| **Nested Key-Value Retrieval** | 多跳（0–4 层嵌套）查找 | 基线 GPT-4 在 3 层 **0%**，MemGPT 维持 **~100%** | 多跳推理，StructFocus 未直接测 |
 
 **论文自陈局限**：① 无正式淘汰策略（eviction policy），LLM 误判重要性会丢关键数据；② 强依赖函数调用质量（GPT-3.5 远差于 GPT-4）；③ 延迟高（每轮 5–10 次推理）；④ 递归摘要有损。
 
@@ -85,7 +85,7 @@
 - Letta 团队 2025-08 公开**自曝**：仅把 LoCoMo 对话历史放进一个文件 + grep/语义搜索，就用 GPT-4o mini 拿到 **74.0%**，高于 Mem0 图模式 68.5%。他们据此**质疑"记忆基准测试是否真有意义"**——认为记忆更多取决于**上下文怎么管理**，而非用了什么检索机制。
 - Letta 作者还公开**指控 Mem0 的 LoCoMo 测试"为营销造假、做无意义测试"**（未回填历史数据、无法复现）。
 
-> 启示：MemGPT/Letta 的"行为级"测试**最受底座模型和评测设计影响**，且连作者自己都在质疑基准的有效性。这恰恰是 StructAgent 走"工程硬指标"路线的价值所在。
+> 启示：MemGPT/Letta 的"行为级"测试**最受底座模型和评测设计影响**，且连作者自己都在质疑基准的有效性。这恰恰是 StructFocus 走"工程硬指标"路线的价值所在。
 
 ### 2.3 GraphRAG 的测试
 
@@ -113,7 +113,7 @@
 
 > 启示：GraphRAG 的测试**最"软"**（LLM 当裁判，主观胜率），但**最贵**（建图 100× 于向量 RAG），且明确不擅长"长对话记忆/遗忘"——它解决的是另一个问题。
 
-### 2.4 LongMemEval（ICLR 2025）— StructAgent 该去对标的主流硬仗
+### 2.4 LongMemEval（ICLR 2025）— StructFocus 该去对标的主流硬仗
 
 来源：UCLA + 腾讯 AI Lab；500 题，嵌入可扩展多会话对话历史。
 
@@ -124,13 +124,13 @@
 | **评测方法** | GPT-4o as judge（>97% 与人类一致）；检索指标 Recall@k / NDCG@k |
 | **关键发现** | 长上下文 LLM 从 Oracle 到 S **掉 30–60%**；多会话推理最难（~83%）；**知识更新最易被旧事实骗**（相似度分不出新旧）；**即使完美召回，阅读理解仍有错** |
 
-> 这是 StructAgent 目前**没覆盖、但最该补**的基准：它的 KU（用户改了公司，该答新的）、TR（时间推理）、ABS（不知道就该说不知道）三类，正是 StructAgent 当前 A/B/C 测试里缺的能力维度。
+> 这是 StructFocus 目前**没覆盖、但最该补**的基准：它的 KU（用户改了公司，该答新的）、TR（时间推理）、ABS（不知道就该说不知道）三类，正是 StructFocus 当前 A/B/C 测试里缺的能力维度。
 
 ---
 
 ## 3. 测试维度逐项对比表
 
-| 测试维度 | StructAgent | MemGPT / Letta | GraphRAG |
+| 测试维度 | StructFocus | MemGPT / Letta | GraphRAG |
 |----------|-------------|----------------|----------|
 | **测试目标** | 长对话截断后信息是否丢 + token 预算 | 跨会话记忆是否真能用 | 全局综合是否全面 |
 | **典型数据集** | 自造 12 话题 × 多轮（遗忘曲线） | MSC-DMR、LoCoMo、NaturalQuestions | Podcast/News、WildGraphBench |
@@ -144,27 +144,27 @@
 
 ---
 
-## 4. 关键差异与对 StructAgent 的启示
+## 4. 关键差异与对 StructFocus 的启示
 
-1. **工具而非对手**：StructAgent 与 MemGPT/Letta 在"agent 运行时记忆"层正面交锋；GraphRAG 在"语料知识问答"层，基本不重叠。**对比时应明确"比哪一层"**，否则数字没意义。
+1. **工具而非对手**：StructFocus 与 MemGPT/Letta 在"agent 运行时记忆"层正面交锋；GraphRAG 在"语料知识问答"层，基本不重叠。**对比时应明确"比哪一层"**，否则数字没意义。
 
 2. **测试哲学差异决定可信度**：
-   - StructAgent 的"截断遗忘曲线"是三者里**最硬**的——它直接测"信息有没有丢"和"花了多少 token"，不请 LLM 当裁判，所以**最快、最便宜、最可复现**。
+   - StructFocus 的"截断遗忘曲线"是三者里**最硬**的——它直接测"信息有没有丢"和"花了多少 token"，不请 LLM 当裁判，所以**最快、最便宜、最可复现**。
    - 但**样本自有、未被社区广泛认可**。MemGPT 的 DMR 93.4% 之所以有说服力，是因为它是公开数据集 + 公开基线。
 
-3. **可溯源是 StructAgent 的差异化卖点**：指针→原文这条链路，比 MemGPT 的"自编辑摘要"和 GraphRAG 的"概率提取图谱"都更可信。README 应把这个讲透。
+3. **可溯源是 StructFocus 的差异化卖点**：指针→原文这条链路，比 MemGPT 的"自编辑摘要"和 GraphRAG 的"概率提取图谱"都更可信。README 应把这个讲透。
 
-4. **成本模型 StructAgent 占优**：仅在摄入时摘要一次 + 语义召回（成本接近向量 RAG）；GraphRAG 建图贵 100×；MemGPT 每轮多次 LLM 调用（延迟高）。这点和 StructAgent "透明代理、token 预算可控"的定位一致。
+4. **成本模型 StructFocus 占优**：仅在摄入时摘要一次 + 语义召回（成本接近向量 RAG）；GraphRAG 建图贵 100×；MemGPT 每轮多次 LLM 调用（延迟高）。这点和 StructFocus "透明代理、token 预算可控"的定位一致。
 
 ---
 
-## 5. 给 StructAgent 测试体系的增强建议（可执行）
+## 5. 给 StructFocus 测试体系的增强建议（可执行）
 
 按优先级：
 
 1. **补齐真实 LLM 跑 `--full`**：mock 已验证管线，正式结论需 `export GLM_API_KEY=... && npx tsx packages/context/benchmark/index.ts --full`。README 已诚实标注"待跑"。
-2. **对标 LongMemEval（ICLR 2025）**：这是主流长期记忆硬仗。重点补它的 **KU（知识更新）** 和 **TR（时间推理）**——当前 StructAgent 测试完全没覆盖这两类，而它们恰恰是真实 agent 最易翻车的地方。
-3. **对标 MSC-DMR**：把 StructAgent 接到 MemGPT 的 Deep Memory Retrieval 数据集，直接对比 93.4% 那条线，最有对外说服力。
+2. **对标 LongMemEval（ICLR 2025）**：这是主流长期记忆硬仗。重点补它的 **KU（知识更新）** 和 **TR（时间推理）**——当前 StructFocus 测试完全没覆盖这两类，而它们恰恰是真实 agent 最易翻车的地方。
+3. **对标 MSC-DMR**：把 StructFocus 接到 MemGPT 的 Deep Memory Retrieval 数据集，直接对比 93.4% 那条线，最有对外说服力。
 4. **加 `--sweep` 近端/中断/远端话题分布**：已支持，用于证明"无论目标话题在对话哪个位置，C 都不退化"。
 5. **接中文分词器**：ContentStore BM25 对 CJK 弱，真实中文语料下召回会掉。
 6. **跨会话持久化召回率做成 CI 前自测**：我们已经验证"flush→新实例加载同目录→recall 不变"，应固化成 `npm test` 一部分。
@@ -174,7 +174,7 @@
 
 ## 6. 一句话结论
 
-> **StructAgent 的测试是三者里最"工程硬"的（量化遗忘曲线 + token 预算，可复现、零 judge 依赖），但样本与社区认可度不如 LoCoMo / LongMemEval；GraphRAG 的测试最"质量软"（LLM-judge 胜率）且成本最高；MemGPT/Letta 的测试介于两者之间，且因基准争议已自我质疑。** StructAgent 的下一步不是"再跑自己的 A/B/C"，而是**把遗忘曲线的方法论搬到 LongMemEval / MSC-DMR 上**，用社区认账的基准证明同一件事。
+> **StructFocus 的测试是三者里最"工程硬"的（量化遗忘曲线 + token 预算，可复现、零 judge 依赖），但样本与社区认可度不如 LoCoMo / LongMemEval；GraphRAG 的测试最"质量软"（LLM-judge 胜率）且成本最高；MemGPT/Letta 的测试介于两者之间，且因基准争议已自我质疑。** StructFocus 的下一步不是"再跑自己的 A/B/C"，而是**把遗忘曲线的方法论搬到 LongMemEval / MSC-DMR 上**，用社区认账的基准证明同一件事。
 
 ---
 
@@ -186,4 +186,4 @@
 - BenchmarkQED：Microsoft Research Blog (2025) — AutoQ / AutoE / AutoD，LazyGraphRAG
 - WildGraphBench：Wang et al., arXiv 2602.02053 (2026)
 - LongMemEval：Wu et al., *LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory*, ICLR 2025（UCLA + 腾讯 AI Lab）
-- StructAgent 自身：本仓库 `docs/benchmark-guide.md`、`packages/context/benchmark/`（A/B/C 三线对照，mock 已验证 A 100% / B 83.3% / C 100%）
+- StructFocus 自身：本仓库 `docs/benchmark-guide.md`、`packages/context/benchmark/`（A/B/C 三线对照，mock 已验证 A 100% / B 83.3% / C 100%）

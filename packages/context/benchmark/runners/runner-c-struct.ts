@@ -1,4 +1,4 @@
-// @struct/context — C 线 Runner：StructAgent（被测系统）
+// @structfocus/context — C 线 Runner：StructFocus（被测系统）
 //
 // 概括 → 胶囊 → 指针 → 语义召回：
 //   1. 把整段对话喂入 LongContextEngine（确定性概括，无需 LLM）
@@ -14,7 +14,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Message, RunResultC } from "../types.js";
 import { estimateTokens, type ChatFn } from "../llm-provider.js";
-import type { LLMMessage } from "../../src/index.js";
 
 export interface RunCOpts {
   /** 引擎最大窗口（仅影响自动管理，flush 时强制全概括） */
@@ -59,9 +58,9 @@ export async function runStruct(
     context = await fallbackInject(engine);
   }
 
-  // 5. StructAgent 存储兜底：胶囊摘要偶尔会漏掉某个关键词（确定性回退的局限）。
-  //    此时直接从「已被 StructAgent 摄入的对话」中定位该关键词的原文片段补回，
-  //    模拟 StructAgent 通过 ContentStore/胶囊指针找回丢失信息的能力。
+  // 5. StructFocus 存储兜底：胶囊摘要偶尔会漏掉某个关键词（确定性回退的局限）。
+  //    此时直接从「已被 StructFocus 摄入的对话」中定位该关键词的原文片段补回，
+  //    模拟 StructFocus 通过 ContentStore/胶囊指针找回丢失信息的能力。
   //    这保证 C 线召回率逼近 A 线（既压缩又不忘），同时 prompt 仍远小于 A 线。
   context = backfillMissingKeywords(context, keywords, messages);
 
@@ -109,7 +108,7 @@ async function fallbackInject(engine: LongContextEngine): Promise<string> {
 
 /**
  * 存储兜底：检查注入内容是否已覆盖所有关键词；若胶囊摘要漏掉某个，
- * 从已被 StructAgent 摄入的对话原文中定位该关键词所在句子补回。
+ * 从已被 StructFocus 摄入的对话原文中定位该关键词所在句子补回。
  * 只补「缺失的关键词对应片段」，不把整段历史塞回，故 C 线 prompt 仍远小于 A 线。
  */
 function backfillMissingKeywords(

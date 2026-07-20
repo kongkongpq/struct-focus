@@ -1,4 +1,4 @@
-// @struct/mcp - StructAgent 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）
+// @structfocus/mcp - StructFocus 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）
 //
 // 暴露上下文原语为 MCP Tools：focus / forget / reflect / autoManage /
 // appendTool / appendMessage / getEntries / getLog / reset / remember / recall。
@@ -10,9 +10,9 @@ import {
   ContextManager,
   TOTAL_BUDGET,
   type TaskContext,
-} from "@struct/context";
+} from "@structfocus/context";
 
-const SYSTEM_PROMPT = "StructAgent 上下文引擎（MCP）";
+const SYSTEM_PROMPT = "StructFocus 上下文引擎（MCP）";
 
 interface McpTool {
   name: string;

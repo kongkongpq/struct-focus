@@ -1,4 +1,4 @@
-// @struct/context - 记忆后端（recall/remember 的存储与检索，缺口 A 修复）
+// @structfocus/context - 记忆后端（recall/remember 的存储与检索，缺口 A 修复）
 //
 // 默认 InMemoryBackend（零依赖，分词逐词匹配 + 命中次数相关性排序）；
 // 可替换为 SqliteFtsBackend（FTS5，见 memory-sqlite.ts）实现持久化与更精准检索。

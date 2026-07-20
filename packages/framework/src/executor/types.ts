@@ -1,4 +1,4 @@
-// @struct/framework - 执行器接口
+// @structfocus/framework - 执行器接口
 
 export interface ExecOpts {
   readonly cwd: string;

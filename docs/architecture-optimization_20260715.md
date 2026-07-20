@@ -1,4 +1,4 @@
-# StructAgent 架构优化分析（v5.1）
+# StructFocus 架构优化分析（v5.1）
 
 > 日期：2026-07-15 ｜ 焦点：架构层面还有什么能优化的
 > 前序：v5 评估报告（srcuctagent-v5-review_20260715.md，7.8/10）

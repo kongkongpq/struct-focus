@@ -1,11 +1,11 @@
-// @struct/context — ContextMiddleware：把 StructAgent 接入任意 Agent 框架的契约
+// @structfocus/context — ContextMiddleware：把 StructFocus 接入任意 Agent 框架的契约
 //
 // 这是「模式二：中间件注入」（见 docs/opensource-launch-guide.md §2）的标准接口。
 // 框架只需在 hook 点调用这三个方法，无需改框架源码、也无需引入任何框架依赖。
 //
 // 重要边界：这不是某个具体框架的适配层。HTTP Sidecar / Python wrapper 等「针对特定
 // 框架或语言」的适配留给社区（见 guide §7「不要做的事」）。ContextMiddleware 是
-// StructAgent 自身暴露的、与框架无关的集成契约——任何支持 pre/post LLM hook 的
+// StructFocus 自身暴露的、与框架无关的集成契约——任何支持 pre/post LLM hook 的
 // 框架（OpenClaw、CodeX 等）都能直接实现它。
 
 import type { LongContextEngine } from "./longcontext-engine.js";
@@ -18,13 +18,13 @@ export interface Message {
 }
 
 /**
- * StructAgent 暴露给 Agent 框架的中间件契约。
+ * StructFocus 暴露给 Agent 框架的中间件契约。
  * 三个方法对应一次 LLM 调用的生命周期。
  */
 export interface ContextMiddleware {
   /** LLM 调用前：喂入本轮新消息 + 语义召回相关历史，返回增强后的消息数组 */
   preLlmCall(messages: Message[]): Promise<Message[]>;
-  /** LLM 返回后：把 assistant 回复喂回 StructAgent（本轮 user 已在 preLlmCall 喂入） */
+  /** LLM 返回后：把 assistant 回复喂回 StructFocus（本轮 user 已在 preLlmCall 喂入） */
   postLlmCall(userMsg: string, assistantMsg: string): void;
   /** Agent 主动语义召回，返回可直接注入的上下文文本（无命中返回空串） */
   recall(query: string): Promise<string>;
@@ -75,7 +75,7 @@ export function createContextMiddleware(
     if (recallText) {
       out.push({
         role: "system",
-        content: `以下是与本次请求相关的历史上下文（由 StructAgent 召回）：\n\n${recallText}`,
+        content: `以下是与本次请求相关的历史上下文（由 StructFocus 召回）：\n\n${recallText}`,
       });
     }
     for (const m of messages) {

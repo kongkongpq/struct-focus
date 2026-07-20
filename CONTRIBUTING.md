@@ -1,4 +1,4 @@
-# Contributing to StructAgent
+# Contributing to StructFocus
 
 Thanks for your interest! This is a **solo, transitional project** (a 9-day sprint from zero to a working benchmark). The contribution model is deliberately minimal — read on.
 
@@ -6,8 +6,8 @@ Thanks for your interest! This is a **solo, transitional project** (a 9-day spri
 
 ```bash
 # Prerequisites: Node.js >= 20, pnpm >= 9
-git clone https://github.com/struct-agent/struct-agent.git
-cd struct-agent
+git clone https://github.com/structfocus-agent/structfocus-agent.git
+cd structfocus-agent
 pnpm install
 ```
 
@@ -24,10 +24,10 @@ pnpm build          # Build all packages
 
 ```
 packages/
-  context/   — @struct/context: the context engine (LongContextEngine, ContextManager,
+  context/   — @structfocus/context: the context engine (LongContextEngine, ContextManager,
                ContentStore, CapsuleStore, ContextMiddleware). Core library, import standalone.
-  app/       — struct-app: Electron desktop shell (chat UI + context engine).
-  mcp/       — @struct/mcp: MCP Server (JSON-RPC 2.0 over stdio).
+  app/       — structfocus-app: Electron desktop shell (chat UI + context engine).
+  mcp/       — @structfocus/mcp: MCP Server (JSON-RPC 2.0 over stdio).
 ```
 
 `context` is the foundation; `app` and `mcp` both depend on it. No circular dependencies.
@@ -41,7 +41,7 @@ Bug reports and sharp critiques are welcome.
 1. Search existing issues to avoid duplicates.
 2. Open a new issue with: reproduction steps, expected vs. actual behavior, environment (OS / Node / pnpm version).
 
-If StructAgent *lost* to FIFO truncation in your scenario, that's the most useful issue you can file.
+If StructFocus *lost* to FIFO truncation in your scenario, that's the most useful issue you can file.
 
 ### Pull Requests: no (for now)
 

@@ -1,6 +1,6 @@
 // framework 测试套件 - 类型地基：Branded ID / Result / Timestamp
 import { describe, it, expect } from "vitest";
-import { createId, Ok, Err, ResultUtil, now, type Id } from "@struct/framework";
+import { createId, Ok, Err, ResultUtil, now, type Id } from "@structfocus/framework";
 
 describe("Branded ID", () => {
   it("createId 生成带前缀的唯一 ID", () => {

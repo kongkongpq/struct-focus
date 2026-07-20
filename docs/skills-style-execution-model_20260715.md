@@ -288,7 +288,7 @@ Phase 0+1 已验收。自动管理已跑通，框架兜底已生效。
 Skills 风格是增强层，不是基础层。优先级：
 
 ```
-P1: 基准测试数据（跑出 Headroom vs StructAgent 对比）     ← 现在该做
+P1: 基准测试数据（跑出 Headroom vs StructFocus 对比）     ← 现在该做
 P2: VS Code 插件分发（让用户能用）                       ← 尽快
 P3: Skills 风格 MCP 工具（LLM 主动管理）                  ← 4.5 天，不急
 ```

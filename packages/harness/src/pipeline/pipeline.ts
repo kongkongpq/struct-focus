@@ -1,10 +1,11 @@
-// @struct/harness - 6 阶段命令管道
+// @structfocus/harness - 6 阶段命令管道
 
-import type { ToolDef, ToolCall, ToolResult, RiskLevel } from "@struct/framework";
+import type { ToolDef, ToolCall, ToolResult, RiskLevel } from "@structfocus/framework";
 import { Policy } from "../policy.js";
 import { sanitizeOutput, detectAnomalies, classifyError } from "./sanitize.js";
 import type { ProcessExecutor } from "../executor/process.js";
 import type { AuditLog } from "../audit.js";
+import * as path from "node:path";
 
 export type PipelineStage = "parse" | "classify" | "validate" | "transform" | "sanitize" | "execute";
 
@@ -114,7 +115,7 @@ export async function runPipeline(ctx: PipelineContext): Promise<ToolResult> {
   if (ctx.parsedArgs["path"] && typeof ctx.parsedArgs["path"] === "string") {
     const raw = ctx.parsedArgs["path"];
     if (!raw.startsWith("/") && !raw.match(/^[A-Z]:/i)) {
-      ctx.parsedArgs["path"] = require("node:path").resolve(ctx.cwd, raw);
+      ctx.parsedArgs["path"] = path.resolve(ctx.cwd, raw);
     }
   }
 

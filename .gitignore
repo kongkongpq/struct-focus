@@ -8,3 +8,16 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+
+# 运行时状态目录（引擎本地存储，不进仓库）
+.structfocus/
+.structagent/
+.longcontext-qa/
+.longcontext-qa-v2/
+.codebuddy/
+.longcontext/
+
+# benchmark 结果产物（可本地复现，不提交）
+packages/context/benchmark/results/
+*.csv
+

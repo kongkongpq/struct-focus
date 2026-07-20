@@ -1,4 +1,4 @@
-// @struct/context — LongContext Engine：独立长上下文管理引擎 (2026-07-19)
+// @structfocus/context — LongContext Engine：独立长上下文管理引擎 (2026-07-19)
 //
 // 「不是压缩，是概括→胶囊→指针→召回」
 //
@@ -7,7 +7,7 @@
 //
 // 独立于任何 Agent 框架，只需注入 LLM 调用函数即可工作。
 // 设计约束：
-//   - 零框架依赖（不依赖 StructAgent / OpenClaw / CodeX）
+//   - 零框架依赖（不依赖 StructFocus / OpenClaw / CodeX）
 //   - 磁盘持久化（ContentStore + CapsuleStore）
 //   - LLM 摘要引擎通过注入接入（GLM-4 / DeepSeek / Claude 均可）
 //   - 召回时按语义搜索，不按 ID 盲捞
@@ -23,11 +23,11 @@
 //   await engine.flush(); // 手动触发概括
 //   const result = await engine.recall("Redis OOM 问题"); // 语义召回
 
-import { ContextManager, type ContextManagerOptions } from "./manager.js";
-import { ContentStore, type StoredContent, type SearchResult, type SearchOptions } from "./content-store.js";
+import { ContextManager } from "./manager.js";
+import { ContentStore, type StoredContent } from "./content-store.js";
 import { CapsuleStore, type Capsule } from "./capsule.js";
-import { summarizeToCapsule, type SummarizeInput, type SummarizeOutput } from "./summarize.js";
-import { BudgetManager } from "./budget.js";
+import type { SummarizeOutput } from "./summarize.js";
+
 
 // ─── 配置 ───────────────────────────────────────────────
 

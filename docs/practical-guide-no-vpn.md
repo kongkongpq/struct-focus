@@ -31,11 +31,11 @@ $ git log --oneline -3
 ```bash
 # 1. 先在 Gitee 网页上创建仓库
 #    打开 https://gitee.com → 右上角 + → 新建仓库
-#    仓库名: struct-agent，选择"公开"，不要勾选"初始化仓库"
+#    仓库名: structfocus-agent，选择"公开"，不要勾选"初始化仓库"
 
 # 2. 回到命令行，设置 remote
 cd E:\Develop\SrcuctAgent
-git remote add origin https://gitee.com/你的用户名/struct-agent.git
+git remote add origin https://gitee.com/你的用户名/structfocus-agent.git
 
 # 3. 先把改动提交了
 git add -A
@@ -87,7 +87,7 @@ registry=https://registry.npmmirror.com
 pnpm install  # 现在应该飞快
 ```
 
-如果你的项目用了 `node_modules/.pnpm` 里的 workspace 协议（`@struct/context` 等），确保根目录 `.npmrc` 也有镜像配置：
+如果你的项目用了 `node_modules/.pnpm` 里的 workspace 协议（`@structfocus/context` 等），确保根目录 `.npmrc` 也有镜像配置：
 
 ```ini
 # E:\Develop\SrcuctAgent\.npmrc
@@ -123,7 +123,7 @@ registry=https://registry.npmmirror.com
 
 ## TL;DR
 LLM 上下文超限时，FIFO 截断把旧消息直接扔掉。160 轮对话后，关于第一个话题的召回率只剩 33%。
-StructAgent 用"概括→胶囊→语义召回"保留 100%，token 消耗降低 76%。
+StructFocus 用"概括→胶囊→语义召回"保留 100%，token 消耗降低 76%。
 
 ## 问题
 - 所有 Agent 框架都在干同一件事：消息太长就扔旧的
@@ -134,17 +134,17 @@ StructAgent 用"概括→胶囊→语义召回"保留 100%，token 消耗降低 
 三个关键概念：概括（把对话总结成结构化记录）→ 胶囊（打包成可检索的单元）→ 语义召回（需要时搜回来）
 
 ## 结果（贴 benchmark 表）
-| 160 轮 | A 裸跑 | B FIFO | C StructAgent |
+| 160 轮 | A 裸跑 | B FIFO | C StructFocus |
 |---------|--------|--------|---------------|
 | 召回率  | 100%   | 33%    | 100%          |
 
 ## 代码
-https://gitee.com/xxx/struct-agent （MIT，不接受 PR）
+https://gitee.com/xxx/structfocus-agent （MIT，不接受 PR）
 ```
 
 ### 一句话版本（发即刻/V2EX）
 
-> "所有的 LLM Agent 都在用 FIFO 截断管理上下文——旧消息直接扔掉。160 轮后第一个话题的召回率只剩 33%。写了个 9 天项目修了这个：概括→胶囊→语义召回，100% 保留。https://gitee.com/xxx/struct-agent"
+> "所有的 LLM Agent 都在用 FIFO 截断管理上下文——旧消息直接扔掉。160 轮后第一个话题的召回率只剩 33%。写了个 9 天项目修了这个：概括→胶囊→语义召回，100% 保留。https://gitee.com/xxx/structfocus-agent"
 
 ---
 
@@ -157,7 +157,7 @@ pnpm config set registry https://registry.npmmirror.com
 # 2. 在 Gitee 创建仓库 + 提交推送（5 分钟）
 git add -A
 git commit -m "feat: context engine with capsule recall, benchmark pipeline"
-git remote add origin https://gitee.com/你的用户名/struct-agent.git
+git remote add origin https://gitee.com/你的用户名/structfocus-agent.git
 git push -u origin feat/web-ui
 
 # 3. 去掘金发文章（30 分钟）

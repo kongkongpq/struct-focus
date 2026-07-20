@@ -1,4 +1,4 @@
-// @struct/context - SQLite FTS5 记忆后端（缺口 A 中期方案，可选模块）
+// @structfocus/context - SQLite FTS5 记忆后端（缺口 A 中期方案，可选模块）
 //
 // 通过 better-sqlite3（同步 API）实现 FTS5 全文检索 + 持久化，是 MemoryBackend 的一种实现。
 // 注意：better-sqlite3 为原生模块，需在运行时可用。本文件不直接静态 import 该原生模块，
@@ -27,9 +27,9 @@ export class SqliteFtsBackend implements MemoryBackend {
 
   constructor(dbPath = ":memory:") {
     this.dbPath = dbPath;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const req = createRequire(import.meta.url);
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const Database = req("better-sqlite3");
     const db = new Database(dbPath) as SqliteDb;
     db.pragma("journal_mode = WAL");

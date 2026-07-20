@@ -1,4 +1,4 @@
-﻿// @struct/context — 验收测试运行入口
+﻿// @structfocus/context — 验收测试运行入口
 //
 // 用法：
 //   npx tsx packages/context/bench/run-llm.ts
@@ -136,14 +136,14 @@ async function main() {
   totalOutputTokens += estimateTokens([needleBaseAnswer]);
   console.log(`  朴素基线回答: "${needleBaseAnswer.slice(0, 150)}"`);
 
-  console.log("  发送 StructAgent 到 LLM...");
+  console.log("  发送 StructFocus 到 LLM...");
   const needleManagedAnswer = await callLLM(config, needleResult.managed.messages as LLMMessage[]);
   totalInputTokens += estimateTokens(needleResult.managed.messages.map(m => m.content));
   totalOutputTokens += estimateTokens([needleManagedAnswer]);
-  console.log(`  StructAgent回答: "${needleManagedAnswer.slice(0, 150)}"`);
+  console.log(`  StructFocus回答: "${needleManagedAnswer.slice(0, 150)}"`);
 
   const needleWin = needleBaseAnswer.includes(needleTask.expectedAnswer) !== needleManagedAnswer.includes(needleTask.expectedAnswer);
-  console.log(`  结果: ${needleWin ? (needleManagedAnswer.includes(needleTask.expectedAnswer) ? "🏆 StructAgent 胜" : "⚠️ 朴素胜") : "🤝 平局"}`);
+  console.log(`  结果: ${needleWin ? (needleManagedAnswer.includes(needleTask.expectedAnswer) ? "🏆 StructFocus 胜" : "⚠️ 朴素胜") : "🤝 平局"}`);
   console.log("");
 
   // ═══════════════════════════════════════════════════════
@@ -188,11 +188,11 @@ async function main() {
   totalOutputTokens += estimateTokens([consBaseAnswer]);
   console.log(`  朴素基线: "${consBaseAnswer.slice(0, 200)}"`);
 
-  console.log("  发送 StructAgent 到 LLM...");
+  console.log("  发送 StructFocus 到 LLM...");
   const consManagedAnswer = await callLLM(config, consistencyResult.managed.messages as LLMMessage[]);
   totalInputTokens += estimateTokens(consistencyResult.managed.messages.map(m => m.content));
   totalOutputTokens += estimateTokens([consManagedAnswer]);
-  console.log(`  StructAgent: "${consManagedAnswer.slice(0, 200)}"`);
+  console.log(`  StructFocus: "${consManagedAnswer.slice(0, 200)}"`);
   console.log("");
 
   // ═══════════════════════════════════════════════════════

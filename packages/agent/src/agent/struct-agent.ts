@@ -1,31 +1,18 @@
-// struct-agent - 核心循环 v2（修复：多轮对话消息历史累积）
+// structfocus-agent - 核心循环 v2（修复：多轮对话消息历史累积）
 // 唯一真相源：组装框架→插件→记忆→上下文→工具执行→LLM
 
-import type {
-  Message,
-  RunResult,
-  RunStats,
-  AgentResponse,
-  IMemoryProvider,
-} from "@struct/framework";
-import {
-  EventBus,
-  PluginManager,
-  StateMachine,
-  ConsoleLogger,
-} from "@struct/framework";
-import { Memory } from "@struct/memory";
-import { createMemoryPlugin } from "@struct/memory";
-import { Harness } from "@struct/harness";
-import { ContextBuilder } from "@struct/context";
-import { createLLMClient, type LLMClient, type LLMConfig, type LLMMessage, type LLMToolCall } from "./llm.js";
+import { type RunResult, type RunStats, type IMemoryProvider, EventBus, PluginManager, StateMachine, ConsoleLogger } from "@structfocus/framework";
+import { Memory, createMemoryPlugin } from "@structfocus/memory";
+import { Harness } from "@structfocus/harness";
+import { ContextBuilder } from "@structfocus/context";
+import { createLLMClient, type LLMClient, type LLMConfig, type LLMMessage } from "./llm.js";
 import { LoopDetector, type LoopDetectorOptions } from "./loop-detector.js";
-import { SessionManager, type SessionState } from "./session.js";
+import { SessionManager } from "./session.js";
 import { setupTools, getToolSchemas, type ToolRegistryOptions } from "./tools-registry.js";
 
 // ─── 配置 ──────────────────────────────────────────────────
 
-export interface StructAgentOptions {
+export interface StructFocusOptions {
   readonly cwd: string;
   readonly llm: LLMConfig;
   readonly stateDir?: string;
@@ -51,7 +38,7 @@ Guidelines:
 
 // ─── 事件类型 ──────────────────────────────────────────────
 
-export type StructAgentEvents = {
+export type StructFocusEvents = {
   "step:start": { step: number };
   "step:end": { step: number; response: string };
   "tool:before": { tool: string; args: Record<string, unknown> };
@@ -64,12 +51,12 @@ export type StructAgentEvents = {
 
 // ─── 核心类 ────────────────────────────────────────────────
 
-export class StructAgent {
+export class StructFocus {
   readonly cwd: string;
   readonly stateDir: string;
-  readonly options: Required<StructAgentOptions>;
+  readonly options: Required<StructFocusOptions>;
 
-  readonly events: EventBus<StructAgentEvents>;
+  readonly events: EventBus<StructFocusEvents>;
   readonly plugins: PluginManager;
   readonly memory: Memory;
   readonly harness: Harness;
@@ -81,7 +68,7 @@ export class StructAgent {
 
   private logger: ConsoleLogger;
 
-  constructor(options: StructAgentOptions) {
+  constructor(options: StructFocusOptions) {
     this.options = {
       cwd: options.cwd,
       llm: options.llm,
@@ -95,7 +82,7 @@ export class StructAgent {
     this.cwd = this.options.cwd;
     this.stateDir = this.options.stateDir;
 
-    this.events = new EventBus<StructAgentEvents>();
+    this.events = new EventBus<StructFocusEvents>();
     this.plugins = new PluginManager();
     this.memory = new Memory({ rootPath: this.cwd });
     this.harness = new Harness({ cwd: this.cwd, stateDir: this.stateDir });

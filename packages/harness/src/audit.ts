@@ -1,8 +1,8 @@
-// @struct/harness - 审计日志（只追加 JSONL）
+// @structfocus/harness - 审计日志（只追加 JSONL）
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { now } from "@struct/framework";
+
 
 export interface AuditEntry {
   readonly timestamp: string;

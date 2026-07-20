@@ -1,4 +1,4 @@
-// @struct/framework - EventBus 实现
+// @structfocus/framework - EventBus 实现
 
 import type { BaseEvent, EventHandler, IEventBus } from "./types.js";
 

@@ -1,4 +1,4 @@
-// @struct/context — A 线 Runner：裸跑（Upper Bound）
+// @structfocus/context — A 线 Runner：裸跑（Upper Bound）
 //
 // 对话历史从头到尾全保留，不限窗口。代表「如果上下文无限长，LLM 能多好」。
 

@@ -1,4 +1,4 @@
-// @struct/framework - 日志接口
+// @structfocus/framework - 日志接口
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
 

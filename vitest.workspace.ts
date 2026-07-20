@@ -9,7 +9,7 @@ export default defineWorkspace([
     },
     resolve: {
       alias: {
-        "@struct/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
+        "@structfocus/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
       },
     },
   },
@@ -21,8 +21,8 @@ export default defineWorkspace([
     },
     resolve: {
       alias: {
-        "@struct/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
-        "@struct/memory": new URL("./packages/memory/src/index.ts", import.meta.url).pathname,
+        "@structfocus/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
+        "@structfocus/memory": new URL("./packages/memory/src/index.ts", import.meta.url).pathname,
       },
     },
   },
@@ -34,8 +34,8 @@ export default defineWorkspace([
     },
     resolve: {
       alias: {
-        "@struct/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
-        "@struct/harness": new URL("./packages/harness/src/index.ts", import.meta.url).pathname,
+        "@structfocus/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
+        "@structfocus/harness": new URL("./packages/harness/src/index.ts", import.meta.url).pathname,
       },
     },
   },
@@ -47,8 +47,8 @@ export default defineWorkspace([
     },
     resolve: {
       alias: {
-        "@struct/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
-        "@struct/context": new URL("./packages/context/src/index.ts", import.meta.url).pathname,
+        "@structfocus/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
+        "@structfocus/context": new URL("./packages/context/src/index.ts", import.meta.url).pathname,
       },
     },
   },
@@ -60,11 +60,11 @@ export default defineWorkspace([
     },
     resolve: {
       alias: {
-        "@struct/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
-        "@struct/memory": new URL("./packages/memory/src/index.ts", import.meta.url).pathname,
-        "@struct/harness": new URL("./packages/harness/src/index.ts", import.meta.url).pathname,
-        "@struct/context": new URL("./packages/context/src/index.ts", import.meta.url).pathname,
-        "struct-agent": new URL("./packages/agent/src/index.ts", import.meta.url).pathname,
+        "@structfocus/framework": new URL("./packages/framework/src/index.ts", import.meta.url).pathname,
+        "@structfocus/memory": new URL("./packages/memory/src/index.ts", import.meta.url).pathname,
+        "@structfocus/harness": new URL("./packages/harness/src/index.ts", import.meta.url).pathname,
+        "@structfocus/context": new URL("./packages/context/src/index.ts", import.meta.url).pathname,
+        "structfocus-agent": new URL("./packages/agent/src/index.ts", import.meta.url).pathname,
       },
     },
   },

@@ -1,7 +1,6 @@
-// @struct/memory - 环境打包（项目记忆 layer）
+// @structfocus/memory - 环境打包（项目记忆 layer）
 
-import type { EnvironmentPackage, EnvironmentLayer } from "@struct/framework";
-import { createId, now } from "@struct/framework";
+import { type EnvironmentPackage, type EnvironmentLayer, createId, now } from "@structfocus/framework";
 import { promises as fs, type Dirent } from "node:fs";
 import * as path from "node:path";
 

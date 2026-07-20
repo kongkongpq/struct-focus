@@ -1,4 +1,4 @@
-﻿// @struct/context — LLM 驱动的验收基准
+﻿// @structfocus/context — LLM 驱动的验收基准
 //
 // 测三个场景：
 //   1. Needle-in-Haystack（大海捞针）：噪音中埋关键信息，LLM 能不能找到
@@ -8,7 +8,7 @@
 // 使用 OpenAI 兼容 API（DeepSeek / 智谱 GLM / Moonshot 都可）
 // 零 SDK 依赖，纯 fetch。
 
-import { ContextManager, type TaskContext } from "../src/index.js";
+import { ContextManager } from "../src/index.js";
 
 // ─── 配置 ────────────────────────────────────────────────
 
@@ -310,7 +310,7 @@ export function formatLLMTestReport(
   llmAnswers?: { needle: { baseline: string; managed: string }; consistency: { baseline: string; managed: string } },
 ): string {
   const lines: string[] = [];
-  lines.push("# StructAgent 验收测试报告");
+  lines.push("# StructFocus 验收测试报告");
   lines.push("");
   lines.push(`> 生成时间：${new Date().toISOString()}`);
   lines.push("");
@@ -318,7 +318,7 @@ export function formatLLMTestReport(
   // ── 题 1 ──
   lines.push("## 题 1：Needle-in-Haystack（大海捞针）");
   lines.push("");
-  lines.push("| 指标 | 朴素基线 | StructAgent | 提升 |");
+  lines.push("| 指标 | 朴素基线 | StructFocus | 提升 |");
   lines.push("| --- | ---: | ---: | ---: |");
   lines.push(`| 上下文条目数 | ${needleResult.baseline.entries} | ${needleResult.managed.entries} | **${((1 - needleResult.managed.entries / needleResult.baseline.entries) * 100).toFixed(0)}%** |`);
   lines.push(`| 峰值 Token | ${needleResult.baseline.peakTokens} | ${needleResult.managed.peakTokens} | **${((1 - needleResult.managed.peakTokens / needleResult.baseline.peakTokens) * 100).toFixed(1)}%** |`);
@@ -328,14 +328,14 @@ export function formatLLMTestReport(
     lines.push("**LLM 回答：**");
     lines.push("");
     lines.push(`- 朴素基线：${llmAnswers.needle.baseline.slice(0, 200)}`);
-    lines.push(`- StructAgent：${llmAnswers.needle.managed.slice(0, 200)}`);
+    lines.push(`- StructFocus：${llmAnswers.needle.managed.slice(0, 200)}`);
   }
   lines.push("");
 
   // ── 题 2 ──
   lines.push("## 题 2：跨文件决策一致性");
   lines.push("");
-  lines.push("| 指标 | 朴素基线 | StructAgent |");
+  lines.push("| 指标 | 朴素基线 | StructFocus |");
   lines.push("| --- | ---: | ---: |");
   lines.push(`| 上下文条目数 | ${consistencyResult.baseline.entries} | ${consistencyResult.managed.entries} |`);
   lines.push(`| 峰值 Token | ${consistencyResult.baseline.peakTokens} | ${consistencyResult.managed.peakTokens} |`);
@@ -343,7 +343,7 @@ export function formatLLMTestReport(
   lines.push("");
   lines.push("**各检查点上下文大小：**");
   lines.push("");
-  lines.push("| 步骤 | 朴素基线 Token | StructAgent Token | 缩减% |");
+  lines.push("| 步骤 | 朴素基线 Token | StructFocus Token | 缩减% |");
   lines.push("| --- | ---: | ---: | ---: |");
   for (let i = 0; i < consistencyResult.baseline.qaPairs.length; i++) {
     const b = consistencyResult.baseline.qaPairs[i]!;
@@ -356,7 +356,7 @@ export function formatLLMTestReport(
     lines.push("**LLM 最终回答（总结所有架构决策）：**");
     lines.push("");
     lines.push(`- 朴素基线：${llmAnswers.consistency.baseline.slice(0, 300)}`);
-    lines.push(`- StructAgent：${llmAnswers.consistency.managed.slice(0, 300)}`);
+    lines.push(`- StructFocus：${llmAnswers.consistency.managed.slice(0, 300)}`);
   }
   lines.push("");
 
@@ -364,7 +364,7 @@ export function formatLLMTestReport(
   lines.push("## 题 3：Token 效率");
   lines.push("");
   const ePeakDrop = ((1 - efficiencyResult.managed.peakTokens / efficiencyResult.baseline.peakTokens) * 100).toFixed(1);
-  lines.push("| 指标 | 朴素基线 | StructAgent | 变化 |");
+  lines.push("| 指标 | 朴素基线 | StructFocus | 变化 |");
   lines.push("| --- | ---: | ---: | ---: |");
   lines.push(`| 峰值 Token | ${efficiencyResult.baseline.peakTokens} | ${efficiencyResult.managed.peakTokens} | **-${ePeakDrop}%** |`);
   lines.push(`| 最终 Token | ${efficiencyResult.baseline.endTokens} | ${efficiencyResult.managed.endTokens} | |`);

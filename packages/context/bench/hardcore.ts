@@ -1,4 +1,4 @@
-﻿// @struct/context — Hardcore v2: 真正超窗口 DocQA + 时序矛盾 Multi-hop + 语义干扰 NIAH
+﻿// @structfocus/context — Hardcore v2: 真正超窗口 DocQA + 时序矛盾 Multi-hop + 语义干扰 NIAH
 // GLM-4 128K 上下文专用
 import { ContextManager, type LLMMessage } from "../src/index.js";
 

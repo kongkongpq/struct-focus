@@ -1,4 +1,4 @@
-// @struct/harness - 统一导出
+// @structfocus/harness - 统一导出
 
 export { Harness, type HarnessOptions } from "./harness.js";
 export { ProcessExecutor } from "./executor/process.js";

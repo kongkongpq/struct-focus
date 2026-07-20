@@ -1,7 +1,7 @@
 # Benchmark 搭建指南：A/B/C 三线对照实验
 
-> 目标：用真实数据量化 StructAgent 的注意力衰减缓解效果。
-> 对照逻辑：A 裸跑(上界)→B 简单截断(业界基线)→C StructAgent(被测系统)。
+> 目标：用真实数据量化 StructFocus 的注意力衰减缓解效果。
+> 对照逻辑：A 裸跑(上界)→B 简单截断(业界基线)→C StructFocus(被测系统)。
 
 ---
 
@@ -13,7 +13,7 @@
 |---|------|------|---------|
 | **A** | 裸跑 (Upper Bound) | 对话历史从头到尾全保留，不限窗口 | "LLM 的上限"——如果上下文无限长，LLM 能多好？ |
 | **B** | FIFO 截断 (Baseline) | 30K token 滑动窗口，旧消息直接丢弃 | "市面上 99% 的 Agent/Chat 产品做的事" |
-| **C** | StructAgent (SUT) | 概括→胶囊→指针→语义召回，30K 窗口 | "被测系统" |
+| **C** | StructFocus (SUT) | 概括→胶囊→指针→语义召回，30K 窗口 | "被测系统" |
 
 ### 1.2 核心假设
 
@@ -148,7 +148,7 @@ packages/context/benchmark/
 ├── runners/
 │   ├── runner-a-raw.ts    # A 线：全保留裸跑
 │   ├── runner-b-fifo.ts   # B 线：FIFO 30K 截断
-│   └── runner-c-struct.ts # C 线：StructAgent 概括→胶囊→召回
+│   └── runner-c-struct.ts # C 线：StructFocus 概括→胶囊→召回
 ├── metrics.ts            # 召回率 / token 消耗 / TTFT 计算
 ├── llm-provider.ts       # LLM 调用封装（GLM-4 / DeepSeek / QClaw Pool）
 └── report.ts             # 输出 Markdown 报告
@@ -202,7 +202,7 @@ export async function runFIFO(
 }
 ```
 
-#### 3.2.3 C 线 Runner（StructAgent）
+#### 3.2.3 C 线 Runner（StructFocus）
 
 ```typescript
 // runner-c-struct.ts
@@ -298,7 +298,7 @@ npx tsc --noEmit --project packages/context/tsconfig.json
 npx vitest run --root packages/context 2>&1 | Select-String "passed"
 
 # 3. 确认 LLM API Key 可用（放在 .env 或环境变量）
-$env:GLM_API_KEY = "***REMOVED***.***REMOVED***"
+$env:GLM_API_KEY = "<YOUR_GLM_API_KEY>"
 ```
 
 ### 4.2 执行
@@ -328,7 +328,7 @@ packages/context/benchmark/results/
 ## 5. Markdown 报告模板
 
 ```markdown
-# StructAgent Benchmark Report
+# StructFocus Benchmark Report
 **日期**: 2026-07-19 17:30
 **LLM**: GLM-4-Flash
 **配置**: 话题数=8, 轮数=40, 重复=3
@@ -337,7 +337,7 @@ packages/context/benchmark/results/
 
 ## 5.1 总体对比
 
-| 指标 | A 裸跑 (UB) | B FIFO 30K | C StructAgent | C vs B |
+| 指标 | A 裸跑 (UB) | B FIFO 30K | C StructFocus | C vs B |
 |------|:----------:|:----------:|:-------------:|:------:|
 | 平均召回率 | 85.3% | 42.1% | **71.5%** | **+29.4pp** ✅ |
 | 平均 TTFT | 3200ms | 980ms | **650ms** | **-34%** ✅ |
@@ -353,7 +353,7 @@ packages/context/benchmark/results/
 | 80 | 84% | 21% | 63% | **+42pp** |
 | 160 | 82% | 8% | 51% | **+43pp** |
 
-> 结论：对话轮数 ≥ 40 时，C 线 StructAgent 召回率显著优于 B 线 FIFO 截断（p < 0.01）。
+> 结论：对话轮数 ≥ 40 时，C 线 StructFocus 召回率显著优于 B 线 FIFO 截断（p < 0.01）。
 
 ## 5.3 话题召回率分布
 
@@ -366,7 +366,7 @@ packages/context/benchmark/results/
 
 ## 5.4 Token 效率
 
-| | A 裸跑 | B FIFO | C StructAgent |
+| | A 裸跑 | B FIFO | C StructFocus |
 |--|:-----:|:------:|:------------:|
 | 总 prompt tokens | 580,000 | 450,000 | **90,000** |
 | 输入单价 (GLM-4 ¥) | ¥0.58 | ¥0.45 | **¥0.09** |
@@ -432,7 +432,7 @@ packages/context/benchmark/results/
 **运行**：`npx tsx packages/context/benchmark/index.ts --full --mock`
 （矩阵：轮数 [20,40,80,160] × 话题数 [4,8,12] × 重复 3，FIFO 窗口 4000 tokens，36 条 trial）
 
-| 指标 | A 裸跑 (UB) | B FIFO | C StructAgent | C vs B |
+| 指标 | A 裸跑 (UB) | B FIFO | C StructFocus | C vs B |
 |------|:----------:|:------:|:-------------:|:------:|
 | 平均召回率 | 100.0% | 83.3% | **100.0%** | **+16.7pp** ✅ |
 | 平均 token/prompt | 3196 | 2465 | **758** | — |
@@ -449,7 +449,7 @@ packages/context/benchmark/results/
 
 **Token 效率**：总 prompt tokens A=115,041 / B=88,734 / C=27,270 → C 相对 A 节省 **76%**。
 
-**结论**：在 mock 确定性模式下，C 线 StructAgent 召回率与裸跑上界 A 持平（100%），而 B 线 FIFO
+**结论**：在 mock 确定性模式下，C 线 StructFocus 召回率与裸跑上界 A 持平（100%），而 B 线 FIFO
 在对话超窗口（160 轮）后因尾部截断丢失最前端目标话题、召回率跌至 33%。C 同时把 prompt 压缩
 98%（token 节省 76%），验证了「既不忘、又极省」的核心假设。真实 LLM 下召回率会因概括/召回误差
 略有下降，但 A/B/C 的相对梯度与压缩收益预期保持一致。

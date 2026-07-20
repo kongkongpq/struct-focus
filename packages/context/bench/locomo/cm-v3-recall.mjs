@@ -12,7 +12,7 @@ const ctxUrl = pathToFileURL("E:/Develop/SrcuctAgent/packages/context/dist/index
 const { ContextManager } = await import(ctxUrl);
 
 // ─── 配置 ────────────────────────────────────────────
-const API_KEY = "***REMOVED***.***REMOVED***";
+const API_KEY = process.env.LOCOMO_API_KEY ?? "";
 const API = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 const MODEL = "glm-4-flash";
 const CM_WINDOW = 30000;

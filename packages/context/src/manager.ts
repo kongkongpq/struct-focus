@@ -1,4 +1,4 @@
-// @struct/context - ContextManager（四层冷热架构 2026-07-20 重构）
+// @structfocus/context - ContextManager（四层冷热架构 2026-07-20 重构）
 //
 // 「不是驱逐，是降级」：框架自动按冷热分层管理上下文。
 // 每步 Agent loop 完成后调用 autoManage()，按非活跃内容占比执行四层管理：
@@ -113,7 +113,7 @@ const ERROR_RE = /(error|fail|exception|panic|abort|✗|❌|错误|失败)/i;
 
 /** 阶段1：移除 ANSI 转义码 */
 function stripAnsi(s: string): string {
-  // eslint-disable-next-line no-control-regex
+   
   return s.replace(/\u001b\[[0-9;]*m/g, "").replace(/[\r\u0007]/g, "");
 }
 
@@ -295,10 +295,10 @@ export class ContextManager {
     this.logger = opts.logger ?? consoleLogger;
     this.memory = opts.memory ?? new InMemoryBackend();
     this.store = new ContentStore(
-      opts.storeRoot ?? path.join(process.cwd(), ".structagent", "content-store"),
+      opts.storeRoot ?? path.join(process.cwd(), ".structfocus", "content-store"),
     );
     this.capsules = new CapsuleStore(
-      opts.capsuleRoot ?? path.join(process.cwd(), ".structagent", "capsules"),
+      opts.capsuleRoot ?? path.join(process.cwd(), ".structfocus", "capsules"),
     );
   }
 

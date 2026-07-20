@@ -1,6 +1,6 @@
 // framework 测试 - PluginManager
 import { describe, it, expect, vi } from "vitest";
-import { PluginManager, type IPlugin } from "@struct/framework";
+import { PluginManager, type IPlugin } from "@structfocus/framework";
 
 function makePlugin(id: string, priority: number): IPlugin {
   return {

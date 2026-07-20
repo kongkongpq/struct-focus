@@ -1,4 +1,4 @@
-# StructAgent ContextManager Benchmark Report
+# StructFocus ContextManager Benchmark Report
 > 2026-07-20T08:02:07.261Z
 
 ## 1. Needle-in-Haystack (gkamradt NIAH)

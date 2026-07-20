@@ -1,4 +1,4 @@
-// @struct/context — ContentStore：外部存储，保存被截断/驱逐的原始内容
+// @structfocus/context — ContentStore：外部存储，保存被截断/驱逐的原始内容
 // 零外部依赖。磁盘文件按 entry id 哈希分片，支持 FTS5 全文搜索、回想、展开、审计。
 // ContextManager 在 truncate/ evict/ forget 时调用 save()，
 // 在 expand/ recall 时调用 load() / search()。

@@ -1,6 +1,6 @@
 // framework 测试 - EventBus
 import { describe, it, expect, vi } from "vitest";
-import { EventBus } from "@struct/framework";
+import { EventBus } from "@structfocus/framework";
 
 describe("EventBus", () => {
   it("on/emit 基本订阅与触发", () => {

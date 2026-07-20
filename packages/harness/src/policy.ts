@@ -1,6 +1,6 @@
-// @struct/harness - 策略：沙箱级别、危险命令黑名单、N维权限矩阵、ASK_ONCE
+// @structfocus/harness - 策略：沙箱级别、危险命令黑名单、N维权限矩阵、ASK_ONCE
 
-import type { PermissionMatrix, PermissionRule, PermissionDecision, RiskLevel, SandboxLevel } from "@struct/framework";
+import type { PermissionMatrix, PermissionRule, PermissionDecision, RiskLevel, SandboxLevel } from "@structfocus/framework";
 
 // ─── 危险命令黑名单 ────────────────────────────────────────
 

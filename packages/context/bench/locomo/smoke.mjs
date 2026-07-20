@@ -4,7 +4,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const API_KEY = "***REMOVED***.***REMOVED***";
+const API_KEY = process.env.LOCOMO_API_KEY ?? "";
 const BASE = "https://open.bigmodel.cn/api/paas/v4";
 const MODEL = "glm-4-flash";
 const API = BASE + "/chat/completions";

@@ -1,7 +1,7 @@
-# 三方对比：腾讯 Agent Memory vs Manus vs StructAgent
+# 三方对比：腾讯 Agent Memory vs Manus vs StructFocus
 
 > 日期：2026-07-16
-> 目的：评估 StructAgent 是否在重复造轮子
+> 目的：评估 StructFocus 是否在重复造轮子
 
 ## 结论
 
@@ -9,7 +9,7 @@
 
 ## 三方定位
 
-| 维度 | 腾讯 Agent Memory | Manus | StructAgent |
+| 维度 | 腾讯 Agent Memory | Manus | StructFocus |
 |---|---|---|---|
 | 定位 | 记忆层（长期+短期） | 完整 Agent 产品 | 上下文调度中间层 |
 | 核心创新 | Context Offloading + Mermaid 画布 + L0-L3 金字塔 | CodeAct + 文件系统外部记忆 + KV cache 纪律 | 哈佛架构 + 六原语 + 注意力审计 + PointerRegistry |

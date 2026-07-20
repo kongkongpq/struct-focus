@@ -1,4 +1,4 @@
-// @struct/context — B 线 Runner：FIFO 30K 截断（业界基线）
+// @structfocus/context — B 线 Runner：FIFO 30K 截断（业界基线）
 //
 // 从对话尾部向前取，直到累计 token 超过窗口上限，旧消息直接丢弃。
 // 代表「市面上 99% 的 Agent/Chat 产品做的事」。

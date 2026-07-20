@@ -1,4 +1,4 @@
-// struct-agent - 死循环检测器
+// structfocus-agent - 死循环检测器
 
 export interface LoopDetectorOptions {
   readonly maxSteps: number;

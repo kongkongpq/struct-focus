@@ -1,4 +1,4 @@
-# StructAgent 128K 级社区标准验收基准 — 运行记录
+# StructFocus 128K 级社区标准验收基准 — 运行记录
 
 ## 环境
 - **模型**：qwen-plus (DashScope, 131K 上下文窗口)

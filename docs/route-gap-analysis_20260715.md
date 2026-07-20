@@ -1,4 +1,4 @@
-# StructAgent 路线对照 Gap 分析
+# StructFocus 路线对照 Gap 分析
 
 > 日期：2026-07-15
 > 对照文档：`docs/CONTEXT_MIDDLEWARE_STRATEGY.md`（上下限高发展路线）
@@ -30,7 +30,7 @@
 | 引擎已接入 app | `packages/app/src/main.ts` L132（autoManage）/ L163（setTaskContext） | 接管路径已可达 |
 | 引擎已接入 MCP | `packages/mcp/src/index.ts` L73（autoManage） | 接管路径已可达 |
 
-> 注：路线文档与部分旧分析引用的 `packages/agent/src/agent/struct-agent.ts` 在最近一次重构中已被**删除**，`focus/forget/reflect/remember/recall` 现为 `ContextManager` 方法。本分析已对齐重构后状态。路线文档中指向 `struct-agent.ts` 的行号已失效，不影响本分析。
+> 注：路线文档与部分旧分析引用的 `packages/agent/src/agent/structfocus-agent.ts` 在最近一次重构中已被**删除**，`focus/forget/reflect/remember/recall` 现为 `ContextManager` 方法。本分析已对齐重构后状态。路线文档中指向 `structfocus-agent.ts` 的行号已失效，不影响本分析。
 
 > **更新记录（2026-07-15 实施完成）**：原 6 个 Gap **已全部实现并通过验收基准**。关键落点（重构后当前行号）：
 > - **Gap 1 结构化压缩**：`manager.ts` 新增私有 `structuredCompress()`，含 `[目标]/[状态]/[失败]/[关键工具结果]` 锚点段时原样保留、其余做「头+锚点+错误行+尾」紧凑化；`compressOldEntries()` 改用之。LLM `summarizeLongEntries()` 注入钩子保留为可选增强。
@@ -137,7 +137,7 @@
   2. 从 `index.ts` 移除 `PointerRegistry` 导出；`pointer.ts` 可整体保留为未接管线文档，或加 `@deprecated 未接管线` 标注。
   3. 同步处理测试：`budget.test.ts`/`context.test.ts` 中桶模型相关用例需删除或改写（或标记 `skip`），避免 CI 失败。
 - 顺序：可与 Gap 4 同批（收尾 P1-3/P1-4）。
-- 验收：`pnpm -F @struct/context build` 通过；`grep -rn "new BudgetManager\|\.consume(\|PointerRegistry" packages/{context/src,app,mcp}` 在生产代码中无命中。
+- 验收：`pnpm -F @structfocus/context build` 通过；`grep -rn "new BudgetManager\|\.consume(\|PointerRegistry" packages/{context/src,app,mcp}` 在生产代码中无命中。
 
 ### Gap 6：无量化验收基准（Phase 0/1 验收前提） — ✅ 已完成（2026-07-15）
 路线要求「峰值 token 下降 15%」「任务成功率对比基线提升」，但**无量化验收基准套件**（已有 15 个单元测试覆盖各单元，但测不出这两个指标）。

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// struct-agent - CLI 入口
+// structfocus-agent - CLI 入口
 
 import * as readline from "node:readline";
-import { StructAgent, type StructAgentOptions } from "./agent/struct-agent.js";
+import { StructFocus, type StructFocusOptions } from "./agent/structfocus-agent.js";
 import { toolStats } from "./agent/tools-registry.js";
 
 // ─── 命令行参数解析 ────────────────────────────────────────
@@ -47,11 +47,11 @@ function parseArgs(raw: string[]): CLIOptions {
 
 function printHelp(): void {
   console.log(`
-struct-agent - Struct Bridge 参考实现 CLI
+structfocus-agent - StructFocus 参考实现 CLI
 
 用法:
-  struct-agent [选项]
-  echo "你的需求" | struct-agent [选项]
+  structfocus-agent [选项]
+  echo "你的需求" | structfocus-agent [选项]
 
 选项:
   -C, --cwd <path>       工作目录 (默认: 当前目录)
@@ -81,7 +81,7 @@ struct-agent - Struct Bridge 参考实现 CLI
 
 // ─── 命令行命令处理 ────────────────────────────────────────
 
-async function handleCommand(input: string, agent: StructAgent): Promise<string | null> {
+async function handleCommand(input: string, agent: StructFocus): Promise<string | null> {
   const trimmed = input.trim();
 
   if (trimmed === "/exit" || trimmed === "/quit") {
@@ -155,7 +155,7 @@ Provider:  ${cliOpts.provider}
 输入消息开始交互，输入 /help 查看命令，Ctrl+C 退出
 `);
 
-  const opts: StructAgentOptions = {
+  const opts: StructFocusOptions = {
     cwd: cliOpts.cwd,
     llm: {
       provider: cliOpts.provider,
@@ -167,7 +167,7 @@ Provider:  ${cliOpts.provider}
     maxSteps: cliOpts.maxSteps,
   };
 
-  const agent = new StructAgent(opts);
+  const agent = new StructFocus(opts);
   await agent.init();
 
   // 检查是否有管道输入

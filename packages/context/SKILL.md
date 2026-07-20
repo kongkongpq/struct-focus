@@ -1,4 +1,4 @@
-# StructAgent Context Skill — 上下文中间层
+# StructFocus Context Skill — 上下文中间层
 
 你运行在一个有上下文窗口限制的环境中。本 Skill 帮助你管理注意力：
 当前需要的东西始终在眼前，不需要的东西自动消失，

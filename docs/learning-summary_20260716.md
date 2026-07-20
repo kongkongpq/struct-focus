@@ -1,7 +1,7 @@
-# 五方对比与学习总结：StructAgent 的差距和方向
+# 五方对比与学习总结：StructFocus 的差距和方向
 
 > 日期：2026-07-16
-> 对比对象：腾讯 Agent Memory / Manus / OpenViking / Letta(MemGPT) / StructAgent(我们)
+> 对比对象：腾讯 Agent Memory / Manus / OpenViking / Letta(MemGPT) / StructFocus(我们)
 
 ---
 
@@ -13,13 +13,13 @@
 | **Manus** | 完整 **Agent 产品**（规划+执行+验证+记忆） | 操作系统 |
 | **OpenViking** | Agent 的**上下文数据库**（文件系统范式统一管理） | 文件系统 |
 | **Letta (MemGPT)** | Agent 的**虚拟内存管理器**（OS 式分层分页） | 虚拟内存 |
-| **StructAgent (我们)** | Agent 的**上下文调度中间层**（注意力+版本化+审计） | CPU 调度器 |
+| **StructFocus (我们)** | Agent 的**上下文调度中间层**（注意力+版本化+审计） | CPU 调度器 |
 
 ---
 
 ## 二、五方核心能力矩阵
 
-| 能力 | 腾讯 Agent Memory | Manus | OpenViking | Letta | StructAgent |
+| 能力 | 腾讯 Agent Memory | Manus | OpenViking | Letta | StructFocus |
 |---|---|---|---|---|---|
 | **上下文卸载到外部** | ✅ refs/*.md + node_id | ✅ 文件系统 | ✅ viking:// 虚拟FS | ✅ archival memory 分页 | ❌ forget 是删除 |
 | **分层加载（L0/L1/L2）** | ⚠️ Mermaid 符号 vs 完整原文 | ❌ | ✅ 摘要/概览/全文三级 | ⚠️ core vs archival 两级 | ❌ |

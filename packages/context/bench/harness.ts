@@ -1,4 +1,4 @@
-﻿// @struct/context — 社区标准对齐验收基准 (128K 级)
+﻿// @structfocus/context — 社区标准对齐验收基准 (128K 级)
 //
 // 三题对齐社区标准，全量 128K 级别压力测试：
 //   题1 → gkamradt Needle-in-Haystack (github.com/gkamradt/LLMTest_NeedleInAHaystack, 3500+ stars)
@@ -474,7 +474,7 @@ export function formatSummaryReport(
   cost: string,
 ): string {
   const lines: string[] = [];
-  lines.push("# StructAgent ContextManager Benchmark Report");
+  lines.push("# StructFocus ContextManager Benchmark Report");
   lines.push(`> ${new Date().toISOString()}`);
   lines.push("");
 

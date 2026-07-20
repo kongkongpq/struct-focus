@@ -1,4 +1,4 @@
-# StructAgent 社区标准对齐验收基准 — 设计说明
+# StructFocus 社区标准对齐验收基准 — 设计说明
 
 ## 背景
 

@@ -1,4 +1,4 @@
-// @struct/context — LLM 调用封装
+// @structfocus/context — LLM 调用封装
 //
 // 统一对外的 chat 函数：支持真实 OpenAI 兼容 API（GLM-4 / DeepSeek /
 // 通义 qwen 等），以及离线「mock」模式（确定性回退，无需 API Key）。
@@ -168,9 +168,4 @@ export function createChatFn(config: LLMConfig | null, mock: boolean): ChatFn {
     };
   }
   return (messages: LLMMessage[]) => callReal(config, messages);
-}
-
-/** 便捷封装：直接对一段 prompt 字符串提问 */
-export function quickPrompt(chat: ChatFn, prompt: string): Promise<string> {
-  return chat([{ role: "user", content: prompt }]);
 }

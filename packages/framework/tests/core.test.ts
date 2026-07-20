@@ -1,6 +1,6 @@
 // framework 测试 - Pipeline / StateMachine / retry / Errors
 import { describe, it, expect, vi } from "vitest";
-import { Pipeline, StateMachine, retry, sleep, createError, toStructError, isRetryable, type NamedMiddleware } from "@struct/framework";
+import { Pipeline, StateMachine, retry, createError, toStructError, isRetryable, type NamedMiddleware } from "@structfocus/framework";
 
 // ── Pipeline ──────────────────────────────────────────────
 

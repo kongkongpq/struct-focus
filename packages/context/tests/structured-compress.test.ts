@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ContextManager, type ContextEntry } from "@struct/context";
+import { ContextManager, type ContextEntry } from "@structfocus/context";
 
 function entry(content: string, over: Partial<ContextEntry> = {}): ContextEntry {
   return {

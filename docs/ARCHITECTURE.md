@@ -3,10 +3,10 @@
 ## 分层与依赖方向
 
 ```
-@struct/context   ← 上下文引擎（哈佛 I/D 架构 + 主动注意力 + Git 版本化 + 记忆后端）
+@structfocus/context   ← 上下文引擎（哈佛 I/D 架构 + 主动注意力 + Git 版本化 + 记忆后端）
       ▲        ▲
       │        │
- struct-app   @struct/mcp
+ structfocus-app   @structfocus/mcp
 (Electron 壳) (MCP Server, stdio)
 ```
 
@@ -26,7 +26,7 @@
 - `preload`：安全的上下文隔离 IPC 桥；`ui`：聊天界面。
 
 ### mcp（MCP Server）
-- 基于 JSON-RPC 2.0 over stdio 的零依赖协议实现，把 `@struct/context` 的上下文能力暴露为 MCP 工具，供 Claude Code / 其他 MCP 客户端接入。
+- 基于 JSON-RPC 2.0 over stdio 的零依赖协议实现，把 `@structfocus/context` 的上下文能力暴露为 MCP 工具，供 Claude Code / 其他 MCP 客户端接入。
 
 ## 数据流（一次交互）
 

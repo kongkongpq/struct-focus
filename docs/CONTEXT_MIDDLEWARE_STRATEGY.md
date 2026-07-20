@@ -1,7 +1,7 @@
-# StructAgent 上下文引擎：上下限高发展路线
+# StructFocus 上下文引擎：上下限高发展路线
 
 > 版本：v0.1.0-draft ｜ 日期：2026-07-15
-> 主线锚定：StructAgent 的核心资产是**上下文引擎**（哈佛 I/D 分离 + 六原语 + 预算桶 + 价值驱逐），差异化定位是**「注意力聚焦」而非「压缩裁剪」**。本文件回答：要不要做完整 Agent、如何做中间层、闭源环境怎么破、上下限高的发展路线怎么走。
+> 主线锚定：StructFocus 的核心资产是**上下文引擎**（哈佛 I/D 分离 + 六原语 + 预算桶 + 价值驱逐），差异化定位是**「注意力聚焦」而非「压缩裁剪」**。本文件回答：要不要做完整 Agent、如何做中间层、闭源环境怎么破、上下限高的发展路线怎么走。
 
 ---
 
@@ -10,7 +10,7 @@
 历代审查中有一条判断需修正，防止路线跑偏：
 
 - **旧判断（错误）**：「六原语只落了 3 个，remember/recall 没实现。」
-- **核实后（正确）**：`struct-agent.ts` L120 声明 `CONTEXT_TOOLS = {focus, forget, reflect, remember, recall}` 五个工具**全部已接线**——`focusFile/forgetFile/reflect` 在 `context/src/manager.ts`（L695/L743/L757），`remember/recall` 在 `agent` 层的 `memory` 模块（`struct-agent.ts` L1044-1062，`record` / `searchHybrid` / `searchSync`）。代码注释称「六原语」是命名遗留，实际为 5 个工具。
+- **核实后（正确）**：`structfocus-agent.ts` L120 声明 `CONTEXT_TOOLS = {focus, forget, reflect, remember, recall}` 五个工具**全部已接线**——`focusFile/forgetFile/reflect` 在 `context/src/manager.ts`（L695/L743/L757），`remember/recall` 在 `agent` 层的 `memory` 模块（`structfocus-agent.ts` L1044-1062，`record` / `searchHybrid` / `searchSync`）。代码注释称「六原语」是命名遗留，实际为 5 个工具。
 - **真正的 gap（本轮结论）**：不是「没实现」，而是以下三点：
   1. **注意力是模型手动工具，框架从不主动接管**。`manage()`（L831-849）默认走 `compressOldEntries`（压缩、损信息）→ `evictLowValue` → `truncate`。注意力设计被边缘化为 opt-in，引擎在干你想超越的「压缩」。
   2. **驱逐不看任务**。`evictionScore`（L1133）只看人工重要性 / 访问频率 / 时间衰减 / 体积，**完全不知道「当前子任务在做什么」**，无法按任务承载力淘汰。
@@ -22,7 +22,7 @@
 
 ## 0.5 价值主张（双支柱）：优雅上下文 + 更高正确率
 
-用户定调：StructAgent 的卖点不是「又一个上下文库」，而是**两个并列的、可对外讲的承诺**：
+用户定调：StructFocus 的卖点不是「又一个上下文库」，而是**两个并列的、可对外讲的承诺**：
 
 | 支柱 | 一句话卖点 | 我们的差异化机制 | 路线落点 |
 |---|---|---|---|
@@ -63,7 +63,7 @@
 └───────────────┬─────────────────────────────┘
                 │  调用标准 Context API
 ┌───────────────▼─────────────────────────────┐
-│  StructAgent Context Middleware（你的层）      │
+│  StructFocus Context Middleware（你的层）      │
 │  · 注意力聚焦（focus/forget 框架接管）         │
 │  · 价值驱逐（接任务状态）                      │
 │  · 注意力审计（浪费度量）                      │
@@ -127,7 +127,7 @@
 
 ### Phase 1 — 框架接管六原语 + 任务相关性驱逐（让注意力真发生）
 **目标**：把「模型手动工具」变「框架自动策略」——这是你差异化落地的核心动作。
-- **P1-1 框架接管 focus/forget/reflect**：token > 70% 自动 `evictLowValue` + 关键动作后自动 `reflect`；不再只「提醒模型」（struct-agent L535-540 的提醒改为框架直接执行）。落点：`struct-agent.ts` L531 `manage()` 调用点 + `CONTEXT_TOOLS` 由工具降级为内部 API。
+- **P1-1 框架接管 focus/forget/reflect**：token > 70% 自动 `evictLowValue` + 关键动作后自动 `reflect`；不再只「提醒模型」（structfocus-agent L535-540 的提醒改为框架直接执行）。落点：`structfocus-agent.ts` L531 `manage()` 调用点 + `CONTEXT_TOOLS` 由工具降级为内部 API。
 - **P1-2 补 `remember`/`recall` 的框架触发**：重要决策/约定自动 `remember`，相关任务自动 `recall`（不再等模型自觉）。落点：`memory` 模块调用封装。
 - **P1-3 任务相关性驱逐**：`evictionScore`（L1133）接入当前子任务状态（正在编辑的文件/符号/失败测试），按「任务承载力」而非时间淘汰。落点：`manager.ts` L1133 `evictionScore()`。
 - **P1-4 删死代码**：`EVICTION_ORDER`（budget.ts L43）已部分生效，复核后移除未接管线，避免误导。
@@ -135,7 +135,7 @@
 
 ### Phase 2 — 开源 SDK + 私有化 License（保底收入）
 **目标**：B2B 基础设施变现，撑起「下限」。
-- **P2-1 开源 Core SDK**（Apache-2.0）：`@structagent/context` npm 包，含 Phase 0/1 全部能力 + 标准 Context API。
+- **P2-1 开源 Core SDK**（Apache-2.0）：`@structfocus/context` npm 包，含 Phase 0/1 全部能力 + 标准 Context API。
 - **P2-2 商业版**：trace 回放、注意力浪费看板、成本分析（类 LangSmith/Sentry）。
 - **P2-3 私有化 License**：金融/政企/军工数据不出域，一次性授权 + 年维护费。
 **收入性质**：确定、续费黏性强、客单价高。**这是「下限高」的落点。**

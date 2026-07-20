@@ -1,7 +1,7 @@
 {
-  "name": "@struct/harness",
+  "name": "@structfocus/harness",
   "version": "0.1.0",
-  "description": "Struct Bridge 安全执行层 - 7层管道/权限矩阵/进程树/33工具",
+  "description": "StructFocus 安全执行层 - 7层管道/权限矩阵/进程树/33工具",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,7 @@
     "clean": "rimraf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@struct/framework": "workspace:*"
+    "@structfocus/framework": "workspace:*"
   },
-  "license": "MIT"
+  "license": "Apache-2.0"
 }

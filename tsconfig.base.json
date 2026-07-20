@@ -22,16 +22,16 @@
     "verbatimModuleSyntax": false,
     "resolveJsonModule": true,
     "paths": {
-      "@struct/framework": ["./packages/framework/src/index.ts"],
-      "@struct/framework/*": ["./packages/framework/src/*"],
-      "@struct/memory": ["./packages/memory/src/index.ts"],
-      "@struct/memory/*": ["./packages/memory/src/*"],
-      "@struct/harness": ["./packages/harness/src/index.ts"],
-      "@struct/harness/*": ["./packages/harness/src/*"],
-      "@struct/context": ["./packages/context/src/index.ts"],
-      "@struct/context/*": ["./packages/context/src/*"],
-      "struct-agent": ["./packages/agent/src/index.ts"],
-      "struct-agent/*": ["./packages/agent/src/*"]
+      "@structfocus/framework": ["./packages/framework/src/index.ts"],
+      "@structfocus/framework/*": ["./packages/framework/src/*"],
+      "@structfocus/memory": ["./packages/memory/src/index.ts"],
+      "@structfocus/memory/*": ["./packages/memory/src/*"],
+      "@structfocus/harness": ["./packages/harness/src/index.ts"],
+      "@structfocus/harness/*": ["./packages/harness/src/*"],
+      "@structfocus/context": ["./packages/context/src/index.ts"],
+      "@structfocus/context/*": ["./packages/context/src/*"],
+      "structfocus-agent": ["./packages/agent/src/index.ts"],
+      "structfocus-agent/*": ["./packages/agent/src/*"]
     }
   }
 }

@@ -1,8 +1,8 @@
-// @struct/harness - StateManager（L7 原子写入 + Checkpoint）
+// @structfocus/harness - StateManager（L7 原子写入 + Checkpoint）
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { createId } from "@struct/framework";
+import { createId } from "@structfocus/framework";
 
 export interface Checkpoint {
   readonly id: string;

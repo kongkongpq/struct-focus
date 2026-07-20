@@ -1,7 +1,7 @@
 {
-  "name": "@struct/memory",
+  "name": "@structfocus/memory",
   "version": "0.1.0",
-  "description": "Struct Bridge 记忆层 - JSONL引擎/胶囊/指针/环境/侧车",
+  "description": "StructFocus 记忆层 - JSONL引擎/胶囊/指针/环境/侧车",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,7 @@
     "clean": "rimraf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@struct/framework": "workspace:*"
+    "@structfocus/framework": "workspace:*"
   },
-  "license": "MIT"
+  "license": "Apache-2.0"
 }

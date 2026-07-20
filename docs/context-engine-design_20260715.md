@@ -1,4 +1,4 @@
-# StructAgent Context Engine 完整设计
+# StructFocus Context Engine 完整设计
 
 > 日期：2026-07-15
 > 状态：Phase 0+1 验收通过（峰值 Token 降 27.7%）
@@ -20,7 +20,7 @@
 
 ## 1. 定位
 
-> StructAgent Context Engine = 上下文中间层。做在 Agent 下面、模型上面的那一层。
+> StructFocus Context Engine = 上下文中间层。做在 Agent 下面、模型上面的那一层。
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -433,7 +433,7 @@ recall 命中率        —              100%        ✅
 
 ## 附录：与 Headroom 的量化对比（设计目标）
 
-| 维度 | Headroom | StructAgent |
+| 维度 | Headroom | StructFocus |
 |------|----------|-------------|
 | 策略 | 无损压缩所有内容 | 按价值分级管理 |
 | 压缩/管理比 | 60-95% token 减少 | **27.7%** token 减少 (实测) |

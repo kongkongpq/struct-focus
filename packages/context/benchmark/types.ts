@@ -1,4 +1,4 @@
-// @struct/context — Benchmark 共享类型
+// @structfocus/context — Benchmark 共享类型
 //
 // A/B/C 三线对照实验的共享数据结构。
 // 与 packages/context/src 解耦：这里只描述 benchmark 自身的契约。

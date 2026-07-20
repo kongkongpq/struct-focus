@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const engineRoot = path.join(__dirname, ".longcontext-qa-v2");
 
 // ─── GLM-4 ──────────────────────────────────────────────
-const GLM_API_KEY = "***REMOVED***.***REMOVED***";
+const GLM_API_KEY = process.env.GLM_API_KEY ?? "";
 const GLM_BASE = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
 async function callGLM4(prompt, maxTokens = 2048) {

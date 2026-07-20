@@ -1,9 +1,8 @@
-// struct-agent - 会话持久化与跨会话恢复
+// structfocus-agent - 会话持久化与跨会话恢复
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { createId, now } from "@struct/framework";
-import type { Message } from "@struct/framework";
+import { createId, now, type Message } from "@structfocus/framework";
 
 export interface SessionState {
   readonly id: string;

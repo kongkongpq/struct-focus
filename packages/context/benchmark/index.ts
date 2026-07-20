@@ -1,4 +1,4 @@
-// @struct/context — Benchmark 入口
+// @structfocus/context — Benchmark 入口
 //
 // A/B/C 三线对照实验编排：生成对话 → 跑三线 → 评分 → 聚合 → 出报告。
 //
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
   }
 
   console.log("══════════════════════════════════════════════");
-  console.log(` StructAgent Benchmark — ${args.mode.toUpperCase()}`);
+  console.log(` StructFocus Benchmark — ${args.mode.toUpperCase()}`);
   console.log(` LLM: ${modelLabel}`);
   console.log(` FIFO 窗口: ${args.window} tokens ｜ sweep: ${args.sweep ? "开" : "关"}`);
   console.log(` 配置数: ${configs.length} ｜ 矩阵: ${configs.map((c) => `${c.rounds}/${c.topics}×${c.repeat}`).join(", ")}`);

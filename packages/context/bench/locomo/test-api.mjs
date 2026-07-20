@@ -1,4 +1,4 @@
-const h = "***REMOVED***.***REMOVED***";
+const h = process.env.LOCOMO_API_KEY ?? "";
 console.log("Starting...");
 fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
   method: "POST",

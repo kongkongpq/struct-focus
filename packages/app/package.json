@@ -1,8 +1,9 @@
 {
-  "name": "struct-app",
+  "name": "structfocus-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "license": "Apache-2.0",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -b && tsc -p tsconfig.preload.json && node -e \"const fs=require('fs'); if(fs.existsSync('dist/preload.js')) fs.renameSync('dist/preload.js','dist/preload.cjs')\" && node -e \"require('fs').cpSync('src/ui','dist/ui',{recursive:true})\"",
@@ -15,7 +16,7 @@
     "release": "electron-builder --publish=always"
   },
   "dependencies": {
-    "@struct/context": "workspace:*",
+    "@structfocus/context": "workspace:*",
     "electron-updater": "^6.3.0"
   },
   "devDependencies": {

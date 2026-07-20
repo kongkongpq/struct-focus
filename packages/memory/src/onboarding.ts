@@ -1,4 +1,4 @@
-// @struct/memory - ONBOARDING.md 扫描与启发式生成
+// @structfocus/memory - ONBOARDING.md 扫描与启发式生成
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";

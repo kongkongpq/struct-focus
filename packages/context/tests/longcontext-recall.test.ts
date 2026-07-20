@@ -1,14 +1,14 @@
-﻿// @struct/context — LongContextRecall 新功能单测 (2026-07-19)
+﻿// @structfocus/context — LongContextRecall 新功能单测 (2026-07-19)
 // 覆盖：放置系统 / 召回管线 / 概括管线 / 容量管理 / ContentStore 搜索 / toMessages L1/L2/L3 渲染
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ContextManager } from "../src/manager.js";
 import { ContentStore, type StoredContent } from "../src/content-store.js";
-import { CapsuleStore } from "../src/capsule.js";
+
 import { summarizeToCapsule, chunkBySemantic } from "../src/summarize.js";
 import { buildContext } from "../src/builder.js";
-import { ContextPlacementConflictError, type ContextPlacement, type TaskContext, type ContextEntry } from "../src/types.js";
-import { BudgetManager } from "../src/budget.js";
+import { ContextPlacementConflictError, type ContextPlacement, type ContextEntry } from "../src/types.js";
+
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -27,7 +27,7 @@ function makeCm(opts?: { maxWindow?: number; storeRoot?: string; capsuleRoot?: s
   });
 }
 
-function setTask(cm: ContextManager, editingFiles: string[]) {
+function _setTask(cm: ContextManager, editingFiles: string[]) {
   cm.setTaskContext({ currentSubtasks: ["task1"], editingFiles, failingTests: [], focusedSymbols: ["testFn"], recentErrors: [] });
 }
 

@@ -1,16 +1,16 @@
-// @struct/context - 新模块单测 (2026-07-17，v3)
+// @structfocus/context - 新模块单测 (2026-07-17，v3)
 // 覆盖: ContentStore / CapsuleStore / runInquiry / packSubtask / compressEntries / 可逆操作
 
 import { describe, it, expect, beforeEach, afterEach, afterAll } from "vitest";
 import { ContextManager } from "../src/manager.js";
 import { ContentStore, type StoredContent } from "../src/content-store.js";
 import { CapsuleStore } from "../src/capsule.js";
-import { BudgetManager } from "../src/budget.js";
+
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-const TEST_ROOT = path.join(os.tmpdir(), "structagent-new-tests-" + Date.now());
+const TEST_ROOT = path.join(os.tmpdir(), "structfocus-new-tests-" + Date.now());
 
 const TASK_CTX = {
   currentSubtasks: [] as string[],
@@ -149,7 +149,7 @@ describe("compressEntries", () => {
 
   it("type=system 条目不被压缩", () => {
     mgr.appendObservation("normal");
-    const all = mgr.getAllEntries();
+    const _all = mgr.getAllEntries();
     // 手动插入一个 system 类型条目（通过内部数组）
     (mgr as any).entries.unshift({ id: "e_sys", type: "system", content: "system prompt", tokenCount: 50, timestamp: 1, taskRelevance: 0, evicted: false, compressed: false });
     const count = mgr.compressEntries((_e: any, idx: number) => idx === 0);

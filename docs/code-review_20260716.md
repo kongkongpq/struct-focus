@@ -1,4 +1,4 @@
-# 代码审查：用户修改后的 StructAgent
+# 代码审查：用户修改后的 StructFocus
 
 > 日期：2026-07-16
 > 审查范围：全仓库 packages/context + packages/mcp + packages/app
@@ -10,7 +10,7 @@
 ### 新增模块
 
 1. **`ContentStore`**（`content-store.ts`）— 外部内容存储
-   - 被截断/驱逐的条目完整原文写入磁盘（`.structagent/content-store/entries/<shard>/<id>.json`）
+   - 被截断/驱逐的条目完整原文写入磁盘（`.structfocus/content-store/entries/<shard>/<id>.json`）
    - 按 entry id 哈希分 256 片，避免单目录文件膨胀
    - 支持 `save` / `load` / `loadByFile`（按文件路径批量恢复）
    - **这正是我们 P0 建议的"上下文卸载"的落地实现**

@@ -1,4 +1,4 @@
-# PDR：StructAgent 上下文引擎增强（设计思想萃取 + 能力补齐）
+# PDR：StructFocus 上下文引擎增强（设计思想萃取 + 能力补齐）
 
 | 字段 | 值 |
 |---|---|
@@ -13,9 +13,9 @@
 
 ## 1. 背景与目标
 
-StructAgent 的本质是一个**上下文引擎**：`InstructionContext`（I-Context，稳定可缓存）与 `DataContext`（D-Context，Git 版本化对话）分离，六原语（focus/forget/reflect/remember/recall）做注意力调度，`budget.ts` 控制 125000 token 上限，`manager.ts` 做 `evictLowValue` / `evictionScore` 淘汰。
+StructFocus 的本质是一个**上下文引擎**：`InstructionContext`（I-Context，稳定可缓存）与 `DataContext`（D-Context，Git 版本化对话）分离，六原语（focus/forget/reflect/remember/recall）做注意力调度，`budget.ts` 控制 125000 token 上限，`manager.ts` 做 `evictLowValue` / `evictionScore` 淘汰。
 
-在审视旧项目 StructAICoding 后，萃取了其中与「上下文」同构的四条优雅设计思想（M1–M5 的思绪来源）。本 PDR 将这四条思想落定为 StructAgent 的**上下文修改项**，并补充一项当前缺失的基础能力（M6，非萃取自 StructAICoding）。目标是：
+在审视旧项目 StructAICoding 后，萃取了其中与「上下文」同构的四条优雅设计思想（M1–M5 的思绪来源）。本 PDR 将这四条思想落定为 StructFocus 的**上下文修改项**，并补充一项当前缺失的基础能力（M6，非萃取自 StructAICoding）。目标是：
 
 1. 上下文**按需汇编**而非全量注入（省 token、提信噪比）—— 主要由 **M2 技能仓库**（按阶段注入技能文档，取代静态全量系统提示）实现；工具集保持全量（见 M1 实证约束）；
 2. 正确性由**确定性工具**保证，模型自评不可信—— M3；
@@ -23,7 +23,7 @@ StructAgent 的本质是一个**上下文引擎**：`InstructionContext`（I-Con
 4. 阶段推进由**结构化标准**驱动，而非软提示—— M5；
 5. 需求**有歧义时主动问清楚**，不硬猜—— M6（能力补齐，非萃取）。
 
-> 本 PDR **不引入** StructAICoding 的平台复杂度（多 Agent 编排、PDR/SkillHub、Electron 后端栈、跨服务合同管道）。详见 §5。M2 的技能仓库是 StructAgent 仓库内的静态 markdown 集合，与 StructAICoding 的 SkillHub（运行时技术栈自动匹配 + 文档导出层）无关，后者不搬。
+> 本 PDR **不引入** StructAICoding 的平台复杂度（多 Agent 编排、PDR/SkillHub、Electron 后端栈、跨服务合同管道）。详见 §5。M2 的技能仓库是 StructFocus 仓库内的静态 markdown 集合，与 StructAICoding 的 SkillHub（运行时技术栈自动匹配 + 文档导出层）无关，后者不搬。
 
 ---
 
@@ -54,7 +54,7 @@ StructAgent 的本质是一个**上下文引擎**：`InstructionContext`（I-Con
 `dynamic-prompt.ts` 已提供 `filterToolsByPhase`（L160）作为 opt-in 工具裁剪，但模块头注释（L7-11）与 `PHASE_PROMPTS` 注释（L38-39）明确记载**实证结论**：默认 explore 阶段若裁剪掉 `file_write`/`file_edit`，模型无法写文件、表现「很傻」。`toolFiltering` 配置（L34）默认 `"all"`，注释（L30-32）要求默认全量暴露。因此「默认启用裁剪」会与现有设计直接冲突，且会退化真实表现——这不是偏好分歧，是已有教训。
 
 **设计思想来源**
-StructAICoding 的 SkillResolver 四层分层中「按角色/阶段精准投放」的**工具视野**一半。但萃取时必须尊重 StructAgent 已有的实证约束：裁剪是「可选能力」，不是「默认行为」。
+StructAICoding 的 SkillResolver 四层分层中「按角色/阶段精准投放」的**工具视野**一半。但萃取时必须尊重 StructFocus 已有的实证约束：裁剪是「可选能力」，不是「默认行为」。
 
 **方案**
 1. **不改动默认行为**：`toolFiltering` 维持 `"all"`，全量工具（读/写/执行/验证）在任意阶段可见——守住 L7-11、L38-39 的铁律，避免模型退化。
@@ -151,12 +151,12 @@ StructAICoding 的 `.d.ts` 合同 + Compliance Checker 三步管道（`tsc --noE
 StructAICoding 的 `struct-dev-log`：每条操作写一条 JSONL，字段含自检结果，由框架消费，无需 LLM 审查。萃取为「**动作机读记录，喂回上下文与审计**」。**不新建 `dev-logger.ts`**——复用现有事件发射器。
 
 **方案**
-1. StructAgent 已有 `events: EventBus<StructAgentEvents>`（`struct-agent.ts` L153 / L203），且 `tool:before`(L799) / `tool:after`(L803 / L909) 已携带结构化载荷（工具名、参数、成败、输出片段）。
+1. StructFocus 已有 `events: EventBus<StructFocusEvents>`（`structfocus-agent.ts` L153 / L203），且 `tool:before`(L799) / `tool:after`(L803 / L909) 已携带结构化载荷（工具名、参数、成败、输出片段）。
 2. 新增一个**框架层订阅者**：监听 `tool:after` 等事件，将结构化载荷转为一条 D-Context observation（含工具名、影响文件、成败、关键输出摘要），供模型与淘汰决策共用。同时作为 M3 校验结果的 observation 通道。
 3. 同一事件流同时驱动 `manager.ts` 的 `evictionScore`（L1069） / `evictLowValue`（L862）审计依据——高价值动作（如成功编译）降低淘汰优先级。
 
 **落点文件与符号（已核实）**
-- `packages/agent/src/agent/struct-agent.ts`：`events` L153 / L203、`tool:before` L799、`tool:after` L803 / L909
+- `packages/agent/src/agent/structfocus-agent.ts`：`events` L153 / L203、`tool:before` L799、`tool:after` L803 / L909
 - `packages/context/src/manager.ts`：`evictionScore` L1069、`evictLowValue` L862、`ContextManager` L437
 
 **验收标准**
@@ -186,7 +186,7 @@ StructAICoding 的 `PhaseDefinition`（`reviewChecklist` / `maxRetries` / `onPas
 3. checklist 校验为结构性检查（关键词 / 字段存在性），不依赖 LLM 判断「质量」。
 
 **落点文件与符号（已核实）**
-- `packages/agent/src/agent/struct-agent.ts`：阶段切换逻辑（参考 `step:start` L344 / `step:end` L431 的事件驱动）
+- `packages/agent/src/agent/structfocus-agent.ts`：阶段切换逻辑（参考 `step:start` L344 / `step:end` L431 的事件驱动）
 - `packages/agent/src/agent/dynamic-prompt.ts`：`PHASE_PROMPTS` L40、`TaskPhase` L15
 
 **验收标准**
@@ -202,20 +202,20 @@ StructAICoding 的 `PhaseDefinition`（`reviewChecklist` / `maxRetries` / `onPas
 ### M6：`ask_user` 工具——主动澄清能力
 
 **问题陈述**
-能力审计确认：agent 逻辑中 grep `clarif` / `unclear` / `ambiguous` / `askUser` **0 命中**；22 个工具（`defs.ts`）全是 fs / shell / git / analysis / verify / context / memory，**无任何「提问 / 确认」类工具**；主循环（`struct-agent.ts` L349-438）无「模型输出疑问 → 暂停等用户输入」分支；plan 阶段提示只说「小任务直接做」，未教模型在歧义时停下来问。结果是：需求有歧义或关键信息缺失时，agent 要么硬猜着做，要么卡在 loop-detector 里，不符合「不确定时主动问清楚」的基本要求。
+能力审计确认：agent 逻辑中 grep `clarif` / `unclear` / `ambiguous` / `askUser` **0 命中**；22 个工具（`defs.ts`）全是 fs / shell / git / analysis / verify / context / memory，**无任何「提问 / 确认」类工具**；主循环（`structfocus-agent.ts` L349-438）无「模型输出疑问 → 暂停等用户输入」分支；plan 阶段提示只说「小任务直接做」，未教模型在歧义时停下来问。结果是：需求有歧义或关键信息缺失时，agent 要么硬猜着做，要么卡在 loop-detector 里，不符合「不确定时主动问清楚」的基本要求。
 
 **设计思想来源**
-非来自 StructAICoding（其 SkillResolver 也不含澄清），而是补齐 StructAgent 缺失的基础能力——与「框架层主动管理」哲学一致：把「何时该问」交给明确的工具 + 指令，而非模型自觉。
+非来自 StructAICoding（其 SkillResolver 也不含澄清），而是补齐 StructFocus 缺失的基础能力——与「框架层主动管理」哲学一致：把「何时该问」交给明确的工具 + 指令，而非模型自觉。
 
 **方案**
 1. 新增 `ask_user` 工具（`packages/harness/src/tools/defs.ts`）：注册一个 `ASK_TOOLS` 常量并并入 `ALL_TOOLS`（L58） / `TOOL_MAP`（L71）。参数：`{ question: string; options?: string[] }`，返回用户输入。
-2. 在主循环（`struct-agent.ts` L349-438）增加分支：当模型调用 `ask_user`，**暂停 agent 循环**，通过 CLI `readline`（已有）或 UI 输入通道收集用户回答，将回答作为一条 user-role observation 注入 D-Context 后恢复循环。该暂停不计入 loop-detector 的 `paused` 卡死判定。
+2. 在主循环（`structfocus-agent.ts` L349-438）增加分支：当模型调用 `ask_user`，**暂停 agent 循环**，通过 CLI `readline`（已有）或 UI 输入通道收集用户回答，将回答作为一条 user-role observation 注入 D-Context 后恢复循环。该暂停不计入 loop-detector 的 `paused` 卡死判定。
 3. 在 plan 阶段指令（`PHASE_PROMPTS` L40 的 plan 段）明确：「需求有歧义、关键信息缺失或存在多种合理实现路径时，调用 `ask_user` 暂停澄清，不要硬猜」。
 4. `ask_user` 走权限矩阵的 `read` 类（无需写 / 删审批），但应在 I-Context 标注「此工具会阻塞等待用户」。
 
 **落点文件与符号（已核实）**
 - `packages/harness/src/tools/defs.ts`：`ALL_TOOLS` L58、`TOOL_MAP` L71（新增 `ask_user` 注册点）
-- `packages/agent/src/agent/struct-agent.ts`：主循环 L349-438（新增暂停 / 恢复分支）、`events` L153 / L203（可选发 `ask:pending` 事件）
+- `packages/agent/src/agent/structfocus-agent.ts`：主循环 L349-438（新增暂停 / 恢复分支）、`events` L153 / L203（可选发 `ask:pending` 事件）
 - `packages/agent/src/agent/dynamic-prompt.ts`：`PHASE_PROMPTS` L40（plan 阶段指令补充）
 
 **验收标准**
@@ -248,7 +248,7 @@ StructAICoding 的 `PhaseDefinition`（`reviewChecklist` / `maxRetries` / `onPas
 
 | 不搬内容 | 原因 |
 |---|---|
-| 17 个 Agent 编排 / leader-router | StructAgent 是单 Agent；多 Agent 仅 GranularityController（默认关闭 opt-in） |
+| 17 个 Agent 编排 / leader-router | StructFocus 是单 Agent；多 Agent 仅 GranularityController（默认关闭 opt-in） |
 | PDR / 技术栈 SkillHub 映射体系 | StructAICoding 平台层产品概念，与上下文引擎无关。**M2 的技能仓库是仓库内静态 markdown，非 SkillHub 自动匹配** |
 | Electron / Fastify / Drizzle 后端栈 | 运行时选择，非设计思想 |
 | 跨服务 `.d.ts` 合同管道整体 | 仅多 Agent 接口约束有意义；单 Agent 下用 M3 的 tsc / lint / test 直跑即可 |
@@ -264,10 +264,10 @@ StructAICoding 的 `PhaseDefinition`（`reviewChecklist` / `maxRetries` / `onPas
 | M1 | 工具裁剪保持 opt-in（默认全量），受限场景安全集经评审 | `dynamic-prompt.ts` L160 / L130 / L145 / L34 / L7-11；`defs.ts` L58 |
 | M2 | SkillResolver 按阶段解析静态技能文档并注入 I-Context，无残留 | 新增 `context/src/skill-resolver.ts`；新增 `context/src/skills/*.md`；`manager.ts` L97 |
 | M3 | 编辑后框架层自动 tsc / lint / test，结果写回 D-Context | `harness.ts` L266 / L300；`manager.ts` L159 |
-| M4 | 现有 `events` 订阅者写结构化 observation，驱动淘汰 / 审计 / M3 通道 | `struct-agent.ts` L153 / L203 / L803；`manager.ts` L1069 / L862 |
-| M5 | 五阶段各有 `exitChecklist`，框架校验后切换并触发 M2 注入 | `struct-agent.ts` 阶段切换；`dynamic-prompt.ts` L40 / L15 |
-| M6 | `ask_user` 工具 + 主循环暂停 / 恢复，歧义时主动澄清 | `defs.ts` L58 / L71；`struct-agent.ts` L349-438 |
+| M4 | 现有 `events` 订阅者写结构化 observation，驱动淘汰 / 审计 / M3 通道 | `structfocus-agent.ts` L153 / L203 / L803；`manager.ts` L1069 / L862 |
+| M5 | 五阶段各有 `exitChecklist`，框架校验后切换并触发 M2 注入 | `structfocus-agent.ts` 阶段切换；`dynamic-prompt.ts` L40 / L15 |
+| M6 | `ask_user` 工具 + 主循环暂停 / 恢复，歧义时主动澄清 | `defs.ts` L58 / L71；`structfocus-agent.ts` L349-438 |
 
 ---
 
-> 附：本 PDR 所有文件:行号引用均已对 StructAgent 当前代码核实（grep 核对 `dynamic-prompt.ts`、`harness.ts`、`manager.ts`、`budget.ts`、`struct-agent.ts`、`defs.ts`）。思想萃取来源见 `SKILL_SYSTEM_MIGRATION.md`。新增模块（`skill-resolver.ts`、`skills/*.md`、`ask_user` 工具）为规划落点，实现时再落地。
+> 附：本 PDR 所有文件:行号引用均已对 StructFocus 当前代码核实（grep 核对 `dynamic-prompt.ts`、`harness.ts`、`manager.ts`、`budget.ts`、`structfocus-agent.ts`、`defs.ts`）。思想萃取来源见 `SKILL_SYSTEM_MIGRATION.md`。新增模块（`skill-resolver.ts`、`skills/*.md`、`ask_user` 工具）为规划落点，实现时再落地。

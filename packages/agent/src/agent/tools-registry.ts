@@ -1,8 +1,7 @@
-// struct-agent - 工具注册（33 工具注册到 Harness，生成 LLM function-calling schema）
+// structfocus-agent - 工具注册（33 工具注册到 Harness，生成 LLM function-calling schema）
 
-import type { ToolDef } from "@struct/framework";
-import type { Harness } from "@struct/harness";
-import { ALL_TOOLS } from "@struct/harness";
+import type { ToolDef } from "@structfocus/framework";
+import { type Harness, ALL_TOOLS } from "@structfocus/harness";
 
 // ─── LLM function-calling 格式转换 ────────────────────────
 

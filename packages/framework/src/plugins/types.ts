@@ -1,6 +1,6 @@
-// @struct/framework - 插件系统类型
+// @structfocus/framework - 插件系统类型
 
-import type { Id, JsonObject } from "../types/base.js";
+import type { JsonObject } from "../types/base.js";
 import type { ToolCall, ToolResult } from "../tools/types.js";
 
 // ─── 沙箱级别 ─────────────────────────────────────────────

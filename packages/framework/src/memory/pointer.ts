@@ -1,4 +1,4 @@
-// @struct/framework - 记忆扩展类型：可逆指针 / 知识胶囊 / 环境包 / 权限矩阵 / 信号
+// @structfocus/framework - 记忆扩展类型：可逆指针 / 知识胶囊 / 环境包 / 权限矩阵 / 信号
 
 import type { Id, Timestamp, JsonObject } from "../types/base.js";
 

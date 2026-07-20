@@ -1,7 +1,6 @@
-// @struct/memory - 知识胶囊管理
+// @structfocus/memory - 知识胶囊管理
 
-import type { KnowledgeCapsule, CapsuleStatus } from "@struct/framework";
-import { createId, now } from "@struct/framework";
+import { type KnowledgeCapsule, createId, now } from "@structfocus/framework";
 import { JsonlEngine } from "./engine.js";
 
 export interface CapsuleInput {

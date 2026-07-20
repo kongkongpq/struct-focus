@@ -1,7 +1,7 @@
 # PDR: Phase 0-1 上下文引擎改造
 
 > 目标：激活现有机制，使框架接管注意力管理
-> 改动文件：manager.ts / budget.ts / struct-agent.ts
+> 改动文件：manager.ts / budget.ts / structfocus-agent.ts
 > 工期：10-14 天（单人）
 
 ---
@@ -13,8 +13,8 @@
 | P0-1 | manager.ts | manage() 重构：主动管理替代被动止损 | ⭐⭐ | 2d |
 | P0-2 | manager.ts | 工具结果预处理：截噪声、过滤重复 | ⭐ | 1d |
 | P0-3 | budget.ts | cache 感知布局：可缓存前缀排布 | ⭐ | 1d |
-| P1-1 | struct-agent.ts | 框架接管 focus/forget/reflect（核心） | ⭐⭐⭐ | 3d |
-| P1-2 | struct-agent.ts | remember/recall 框架自动触发 | ⭐⭐ | 2d |
+| P1-1 | structfocus-agent.ts | 框架接管 focus/forget/reflect（核心） | ⭐⭐⭐ | 3d |
+| P1-2 | structfocus-agent.ts | remember/recall 框架自动触发 | ⭐⭐ | 2d |
 | P1-3 | manager.ts | 任务相关性驱逐 | ⭐⭐⭐ | 3d |
 | P1-4 | budget.ts | 清死代码：EVICTION_ORDER 复核 | ⭐ | 0.5d |
 
@@ -170,7 +170,7 @@ I-Context 和 D-Context 混排，系统 Prompt 没放到最稳定的位置，影
 
 **关键改动**：确保 system prompt 是 messages[0]，且其内容在任务执行过程中不变（不往里面追加动态指令，动态指令走独立 user 消息）。
 
-具体：`struct-agent.ts` L279 `onboarding` 不拼入 system prompt，而是作为独立 user 消息插在 system 之后。
+具体：`structfocus-agent.ts` L279 `onboarding` 不拼入 system prompt，而是作为独立 user 消息插在 system 之后。
 
 同时给 system 消息打 cache 断点标记（智谱 GLM 格式 `cache_control: { type: "ephemeral" }`，DeepSeek 自动前缀缓存无需标记）。
 
@@ -183,7 +183,7 @@ I-Context 和 D-Context 混排，系统 Prompt 没放到最稳定的位置，影
 
 ## P1-1: 框架接管 focus/forget/reflect（最核心改动）
 
-**文件：** `packages/agent/src/agent/struct-agent.ts` L525-555
+**文件：** `packages/agent/src/agent/structfocus-agent.ts` L525-555
 
 ### 现状
 ```
@@ -280,7 +280,7 @@ lastReferenced?: number;  // 最后被模型引用的时间戳
 
 ## P1-2: remember/recall 框架自动触发
 
-**文件：** `packages/agent/src/agent/struct-agent.ts`
+**文件：** `packages/agent/src/agent/structfocus-agent.ts`
 
 ### 现状
 remember/recall 是模型手动工具，模型不一定主动调。
@@ -347,7 +347,7 @@ private extractKeywords(text: string): string[] {
 }
 ```
 
-并在 `StructAgentOptions` 加：
+并在 `StructFocusOptions` 加：
 ```ts
 enableAutoRecall?: boolean; // 默认 true
 ```
@@ -378,7 +378,7 @@ function evictionScore(entry: ContextEntry): number {
 在 `manager.ts` 加一个**任务状态上下文**：
 
 ```ts
-// 新增：任务上下文（由 struct-agent 在每步开始前注入）
+// 新增：任务上下文（由 structfocus-agent 在每步开始前注入）
 interface TaskContext {
   currentFiles: string[];   // 当前正在编辑/关注的文件
   currentSymbols: string[];  // 当前正在修改的函数/类名
@@ -427,11 +427,11 @@ function evictionScore(entry: ContextEntry): number {
 }
 ```
 
-在 `struct-agent.ts` 每步开始前注入任务上下文：
+在 `structfocus-agent.ts` 每步开始前注入任务上下文：
 
 ```ts
 // 在循环体内、manage() 之前：
-import { setTaskContext } from "@struct/context";
+import { setTaskContext } from "@structfocus/context";
 setTaskContext({
   currentFiles: this.contextManager.reflect().focusedFiles,
   currentSymbols: this.recentSymbols ?? [],  // 需从 LLM 响应中解析，或从文件变更推断
@@ -537,12 +537,12 @@ P0-3(1d)     P1-4(0.5d) ← 可在任何时候做
    
    原有的「层2 硬限最后防线」被动兜底层（PDR 中 `manage(): 软限→compressOldEntries / 硬限→evictLowValue`）已删除，`ContextManager` 构造去除了 `hardLimit` 参数，仅保留 `totalBudget` / `softLimit`。`reflect()` 的 `budgetPct` 改为以 `totalBudget` 为基准重算。
 
-2. **自动接管已内聚进 `ContextManager`（不再依赖模型/harness）**：原 PDR 写在 `struct-agent.ts` 的 P1-1 / P1-2 逻辑（70%/85% 自动 evict / 自动 forget 非焦点文件 / 每 5 步 reflect 审计 / 重要决策自动 remember / 任务启动自动 recall）已整体移入 `packages/context/src/manager.ts`，由 `autoManage()` 承载。引擎变为**自洽中间件**，不再需要模型自觉触发。
+2. **自动接管已内聚进 `ContextManager`（不再依赖模型/harness）**：原 PDR 写在 `structfocus-agent.ts` 的 P1-1 / P1-2 逻辑（70%/85% 自动 evict / 自动 forget 非焦点文件 / 每 5 步 reflect 审计 / 重要决策自动 remember / 任务启动自动 recall）已整体移入 `packages/context/src/manager.ts`，由 `autoManage()` 承载。引擎变为**自洽中间件**，不再需要模型自觉触发。
 
 3. **包级重构（彻底拆）**：`packages/agent`、`packages/harness`、`packages/framework`、`packages/memory` 整目录删除。原 `framework` 中被 context 实际引用的极小类型/工具内联进 `packages/context/src/types.ts`；原 `memory` 的 `remember/recall` 折叠为 `ContextManager` 内部 `memoryStore`。`pnpm-workspace.yaml` 收紧为仅 `packages/context` 与 `packages/app`。
 
-4. **UI 重接**：Electron 控制台 `packages/app` 的 `main.ts` 不再 `import StructAgent`，改为直接创建并驱动 `ContextManager`，通过 IPC 暴露 `loadTask / focus / forget / reflect / autoManage / appendTool / appendMessage / setTaskContext` 等原语；前端 `ui/index.html` 改为「上下文引擎控制台」（注意力审计 / 条目聚焦 / 驱逐日志三屏）。
+4. **UI 重接**：Electron 控制台 `packages/app` 的 `main.ts` 不再 `import StructFocus`，改为直接创建并驱动 `ContextManager`，通过 IPC 暴露 `loadTask / focus / forget / reflect / autoManage / appendTool / appendMessage / setTaskContext` 等原语；前端 `ui/index.html` 改为「上下文引擎控制台」（注意力审计 / 条目聚焦 / 驱逐日志三屏）。
 
 5. **验证**：`packages/context` 单测 62 项全过（含引擎分级管理 / 自动 forget / 任务相关性驱逐 / 注意力审计 共 10 项新增）；`context` + `app`（含 preload）独立 `tsc -b` 构建通过，无悬空依赖。
 
-> 注：原 PDR 中 `struct-agent.ts` 的改动文件已随 agent 包删除而失效，相关逻辑以 `ContextManager.autoManage()` + `setTaskContext()` 的形式存在于 context 包内，语义等价。
+> 注：原 PDR 中 `structfocus-agent.ts` 的改动文件已随 agent 包删除而失效，相关逻辑以 `ContextManager.autoManage()` + `setTaskContext()` 的形式存在于 context 包内，语义等价。

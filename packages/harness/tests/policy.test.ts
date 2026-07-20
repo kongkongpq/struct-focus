@@ -1,6 +1,6 @@
 // harness 测试 - Policy + 脱敏 + 错误分类
 import { describe, it, expect } from "vitest";
-import { Policy, DEFAULT_PERMISSIONS, RISK_TO_SANDBOX, sanitizeOutput, detectAnomalies, classifyError } from "@struct/harness";
+import { Policy, RISK_TO_SANDBOX, sanitizeOutput, detectAnomalies, classifyError } from "@structfocus/harness";
 
 describe("Policy", () => {
   it("isDangerous 检测 rm -rf /", () => {

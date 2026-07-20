@@ -1,8 +1,7 @@
-// @struct/framework - PluginManager 实现
+// @structfocus/framework - PluginManager 实现
 
 import type { IPlugin, PluginHooks, AgentContext, ToolContext, RunResult, InjectResult } from "./types.js";
-import type { StructError } from "../errors/types.js";
-import { createError, toStructError } from "../errors/types.js";
+import { type StructError, createError } from "../errors/types.js";
 
 /**
  * 插件管理器：

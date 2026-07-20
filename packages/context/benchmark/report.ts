@@ -1,4 +1,4 @@
-// @struct/context — 报告生成（Markdown / JSON / CSV）
+// @structfocus/context — 报告生成（Markdown / JSON / CSV）
 //
 // 严格对齐 benchmark-guide.md 第 5 节的报告模板。
 
@@ -33,7 +33,7 @@ export function formatMarkdown(
   const cVsB = (C.avgRecall - B.avgRecall) * 100;
 
   const lines: string[] = [];
-  lines.push("# StructAgent Benchmark Report");
+  lines.push("# StructFocus Benchmark Report");
   lines.push("");
   lines.push(`**日期**: ${meta.date}`);
   lines.push(`**LLM**: ${meta.model}`);
@@ -44,14 +44,14 @@ export function formatMarkdown(
       .join("， ")}`,
   );
   lines.push("");
-  lines.push("> 对照逻辑：A 裸跑(上界) → B FIFO 截断(业界基线) → C StructAgent(被测)。");
+  lines.push("> 对照逻辑：A 裸跑(上界) → B FIFO 截断(业界基线) → C StructFocus(被测)。");
   lines.push("> 召回率（上下文留存率）= 注入给 LLM 的上下文中命中 ground-truth 关键词的比例（零 LLM-judge，对 mock 与真实 LLM 同样有效）。");
   lines.push("");
 
   // ─── 5.1 总体对比 ───────────────────────────────
   lines.push("## 5.1 总体对比");
   lines.push("");
-  lines.push("| 指标 | A 裸跑 (UB) | B FIFO | C StructAgent | C vs B |");
+  lines.push("| 指标 | A 裸跑 (UB) | B FIFO | C StructFocus | C vs B |");
   lines.push("|------|:----------:|:------:|:-------------:|:------:|");
   lines.push(
     `| 平均召回率 | ${pct(A.avgRecall)} | ${pct(B.avgRecall)} | **${pct(C.avgRecall)}** | **${cVsB >= 0 ? "+" : ""}${cVsB.toFixed(1)}pp** ${cVsB > 0 ? "✅" : ""} |`,
@@ -89,7 +89,7 @@ export function formatMarkdown(
     if (thresholdRounds !== null) {
       lines.push("");
       lines.push(
-        `> 结论：对话轮数 ≥ ${thresholdRounds} 时，C 线 StructAgent 召回率显著优于 B 线 FIFO 截断（B 因 FIFO 尾部截断已丢失最前端的目标话题）。`,
+        `> 结论：对话轮数 ≥ ${thresholdRounds} 时，C 线 StructFocus 召回率显著优于 B 线 FIFO 截断（B 因 FIFO 尾部截断已丢失最前端的目标话题）。`,
       );
     }
   } else {
@@ -123,7 +123,7 @@ export function formatMarkdown(
   // ─── 5.4 Token 效率 ─────────────────────────────
   lines.push("## 5.4 Token 效率");
   lines.push("");
-  lines.push("| | A 裸跑 | B FIFO | C StructAgent |");
+  lines.push("| | A 裸跑 | B FIFO | C StructFocus |");
   lines.push("|--|:-----:|:------:|:------------:|");
   lines.push(
     `| 总 prompt tokens | ${agg.totalTokens.A.toLocaleString()} | ${agg.totalTokens.B.toLocaleString()} | **${agg.totalTokens.C.toLocaleString()}** |`,

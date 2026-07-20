@@ -1,6 +1,7 @@
-// @struct/context - CodeExplorer（文件树 + 正则符号扫描）
+// @structfocus/context - CodeExplorer（文件树 + 正则符号扫描）
 
-import type { promises as fs } from "node:fs";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 export interface FileInfo {
   readonly path: string;
@@ -28,8 +29,8 @@ export class CodeExplorer {
   private readonly path: typeof import("node:path");
 
   constructor() {
-    this.fs = require("node:fs").promises;
-    this.path = require("node:path");
+    this.fs = fs.promises;
+    this.path = path;
   }
 
   /** 列出文件树（排除 node_modules/dist/.git） */

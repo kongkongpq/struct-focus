@@ -3,9 +3,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { PointerRegistry, BudgetManager, CodeExplorer, ContextBuilder, TOTAL_BUDGET, EVICTION_ORDER } from "@struct/context";
-import type { ContextPointer, IMemoryProvider, RetrievedMemory } from "@struct/framework";
-import { createId, now } from "@struct/framework";
+import { PointerRegistry, BudgetManager, CodeExplorer, ContextBuilder, TOTAL_BUDGET } from "@structfocus/context";
+import { type ContextPointer, type IMemoryProvider, type RetrievedMemory, now } from "@structfocus/framework";
 
 // ── PointerRegistry ───────────────────────────────────────
 
@@ -221,7 +220,7 @@ describe("ContextBuilder", () => {
       userMessage: "hello world",
       sessionId: "test",
     });
-    expect(ctx.systemPrompt).toContain("Struct Bridge");
+    expect(ctx.systemPrompt).toContain("StructFocus");
     expect(ctx.messages.length).toBeGreaterThan(0);
     expect(ctx.messages[ctx.messages.length - 1]!.content).toBe("hello world");
     expect(ctx.tokenUsage.budget).toBe(TOTAL_BUDGET);

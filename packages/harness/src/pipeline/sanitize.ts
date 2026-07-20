@@ -1,4 +1,4 @@
-// @struct/harness - L5 输出后处理：脱敏 + 结构化 + 异常检测
+// @structfocus/harness - L5 输出后处理：脱敏 + 结构化 + 异常检测
 
 const SECRET_PATTERNS: readonly { pattern: RegExp; replacement: string; name: string }[] = [
   { pattern: /(?:sk-|pk-|sk_live_|pk_live_)[a-zA-Z0-9]{20,}/g, replacement: "[REDACTED_API_KEY]", name: "API_KEY" },

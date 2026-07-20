@@ -1,6 +1,6 @@
-// @struct/memory - 标准插件工厂
+// @structfocus/memory - 标准插件工厂
 
-import type { IPlugin, InjectResult, AgentContext, ToolContext, RunResult, RetrievedMemory } from "@struct/framework";
+import type { IPlugin, InjectResult, AgentContext, ToolContext, RunResult } from "@structfocus/framework";
 import type { Memory } from "./memory.js";
 
 /**
@@ -91,7 +91,7 @@ export function createMemoryPlugin(memory: Memory): IPlugin {
         }
       },
 
-      onRunCompleted: async (result: RunResult): Promise<void> => {
+      onRunCompleted: async (_result: RunResult): Promise<void> => {
         // 后台维护（T5）：处理重试队列
         await memory.processCapsuleRetryQueue().catch(() => {});
       },

@@ -1,4 +1,4 @@
-// @struct/framework - 重试工具
+// @structfocus/framework - 重试工具
 
 export interface RetryOptions {
   maxAttempts: number;

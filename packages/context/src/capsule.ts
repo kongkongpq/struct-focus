@@ -1,10 +1,10 @@
-// @struct/context — CapsuleStore：知识胶囊系统
+// @structfocus/context — CapsuleStore：知识胶囊系统
 //
 // 管理磁盘上的上下文胶囊。每个胶囊包含一个子任务完整的上下文记录：
 //   文件列表、决策链路、已知限制、MANDATORY 规则、原始内容汇总。
 //
 // 存储格式 (JSON):
-//   .structagent/capsules/<capsuleId>.json
+//   .structfocus/capsules/<capsuleId>.json
 //
 // 与 ContentStore 的关系：
 //   ContentStore 存单条被截断/驱逐的条目
