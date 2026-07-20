@@ -24,6 +24,8 @@ engine.feedBatch(history);
 const { injectText } = await engine.recall(query);
 ```
 
+架构设计详见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
+
 ## 已知问题
 
 - 仅测过 GLM-4-flash，未覆盖其他模型
