@@ -276,7 +276,7 @@ if (isMain) {
     if (llmCfg) {
       console.error(`[struct-context] LLM 压缩已启用：${llmCfg.model} @ ${llmCfg.baseUrl}`);
     } else {
-      console.error("[struct-context] 未检测到 API Key，LLM 压缩走确定性回退（省钱但不准）。设 STRUCT_LLM_API_KEY / DEEPSEEK_API_KEY / ZHIPU_API_KEY 等环境变量启用 AI 摘要。");
+      console.error("[struct-context] 未检测到 API Key，LLM 压缩走确定性回退（省钱但不准）。设 STRUCT_LLM_API_KEY（可选 STRUCT_LLM_BASE_URL / STRUCT_LLM_MODEL）启用 AI 摘要。");
     }
   }
   startMcpServer();
