@@ -1,10 +1,10 @@
 // @structfocus/context — ContextMiddleware：把 StructFocus 接入任意 Agent 框架的契约
 //
-// 这是「模式二：中间件注入」（见 docs/opensource-launch-guide.md §2）的标准接口。
+// 这是「模式二：中间件注入」的标准接口（将 StructFocus 作为 pre/post LLM hook 注入任意框架）。
 // 框架只需在 hook 点调用这三个方法，无需改框架源码、也无需引入任何框架依赖。
 //
 // 重要边界：这不是某个具体框架的适配层。HTTP Sidecar / Python wrapper 等「针对特定
-// 框架或语言」的适配留给社区（见 guide §7「不要做的事」）。ContextMiddleware 是
+// 框架或语言」的适配留给社区实现（不属于 StructFocus 核心范围）。ContextMiddleware 是
 // StructFocus 自身暴露的、与框架无关的集成契约——任何支持 pre/post LLM hook 的
 // 框架（OpenClaw、CodeX 等）都能直接实现它。
 

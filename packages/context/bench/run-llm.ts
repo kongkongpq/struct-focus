@@ -116,7 +116,7 @@ async function main() {
     description: "你正在重构一个支付系统的数据库层，请依次处理各文件的修改。",
     needle: {
       content: "【重要】生产环境配置已更新：数据库连接串为 postgresql://db-prod.internal:5432/payroll_v3，数据库密码存放在 secrets/db-prod.yaml 文件中。请不要在任何日志中打印此连接串。",
-      source: "docs/deployment-guide.md",
+      source: "synthetic benchmark fixture",
       step: 15,
     },
     question: "生产环境数据库的密码在哪个文件中？请直接给出文件名。如果你不知道，请说你不知道。",

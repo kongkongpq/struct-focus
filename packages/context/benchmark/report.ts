@@ -1,6 +1,6 @@
 // @structfocus/context — 报告生成（Markdown / JSON / CSV）
 //
-// 严格对齐 benchmark-guide.md 第 5 节的报告模板。
+// 报告模板遵循本模块定义的 ReportMeta / Aggregate 结构（Markdown 概览 + JSON 明细 + CSV 明细）。
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
