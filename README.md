@@ -39,4 +39,4 @@ const { injectText } = await engine.recall(query);
 
 ## License
 
-[MIT](./LICENSE)
+[Apache-2.0](./LICENSE)

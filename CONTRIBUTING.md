@@ -59,4 +59,4 @@ We do **not** maintain a PR queue. This keeps a solo project honest and maintain
 
 ## License
 
-By contributing (including by opening issues or publishing a fork), your work is understood to be under the [MIT License](./LICENSE).
+By contributing (including by opening issues or publishing a fork), your work is understood to be under the [Apache-2.0 License](./LICENSE).

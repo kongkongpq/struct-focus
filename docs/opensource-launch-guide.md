@@ -137,7 +137,7 @@ Agent → POST /recall { query: "..." }     → StructFocus → { results: [...]
    → 说清楚：只收 Issue，不维护 PR
    → 社区可以 fork 魔改
 
-8. License: MIT
+8. License: Apache-2.0
 ```
 
 ---

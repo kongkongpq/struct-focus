@@ -11,7 +11,6 @@ Thumbs.db
 
 # 运行时状态目录（引擎本地存储，不进仓库）
 .structfocus/
-.structagent/
 .longcontext-qa/
 .longcontext-qa-v2/
 .codebuddy/
