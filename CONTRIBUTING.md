@@ -5,9 +5,9 @@ Thanks for your interest! This is a **solo, transitional project** (a 9-day spri
 ## Development Setup
 
 ```bash
-# Prerequisites: Node.js >= 20, pnpm >= 9
-git clone https://github.com/structfocus-agent/structfocus-agent.git
-cd structfocus-agent
+# Prerequisites: Node.js >= 22.6 (MCP Server uses --experimental-strip-types), pnpm >= 9
+git clone https://github.com/structfocus/structfocus.git
+cd structfocus
 pnpm install
 ```
 

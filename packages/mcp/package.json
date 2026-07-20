@@ -1,8 +1,11 @@
 {
   "name": "@structfocus/mcp",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "description": "StructFocus 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）",
   "bin": {
     "struct-context-mcp": "./src/index.ts"
