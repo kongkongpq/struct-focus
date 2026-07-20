@@ -1,180 +1,156 @@
 # StructAgent
 
-> **FIFO truncation loses 67% of its knowledge after 160 rounds. StructAgent keeps 100% — using 98% fewer tokens.**
-
-A transparent proxy layer for LLM context. It sits *between your agent framework's `messages` array and the LLM API*, and does summarization → capsule → pointer → semantic recall — so long conversations stop silently forgetting things.
+> 一个过渡期的 LLM 上下文管理实验。可能有用，可能没用。数据说话。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-3178c6.svg)](https://www.typescriptlang.org/)
-[![Benchmark](https://img.shields.io/badge/benchmark-100%25%20recall%20%40%2098%25%20compressed-brightgreen.svg)](#the-numbers)
 
 ---
 
-## The problem
+## 它是干什么的
 
-Your agent builds a `messages` array and sends it to the LLM. When the conversation gets long, something has to give. The naive fix is **FIFO truncation** — drop the oldest messages to fit the window. But the oldest messages are often the most important (the original task, the decision you made in round 5).
+LLM 对话长了之后，大多数 agent 框架会直接丢掉最早的消息（FIFO 截断），假装它们不存在。StructAgent 换个思路：**不丢，只是不一直放在眼前。**
 
-```
-Before:  Agent Code → buildMessages() → fetch("https://api.openai.com/...")
-After:   Agent Code → buildMessages() → StructAgent.manage() → fetch("https://api.openai.com/...")
-                                              ↑
-                                     summarize / capsule / recall / evict here
-```
+核心就四步：概括 → 打包成胶囊 → 留个指针 → 需要时再拿出来。
 
-StructAgent is **not an agent framework**. It is a drop-in layer. Compatibility depends on exactly one thing: **can you intercept the `messages` array your agent builds?**
-
-### The numbers (A/B/C benchmark)
-
-We run three configurations against the same conversations and measure **context retention** — the fraction of ground-truth keywords that survive into the context actually sent to the LLM. The metric is deterministic and needs **no LLM-as-judge**, so it is reproducible and bias-free on both mock and real LLMs.
-
-| 对话轮数 | A 裸跑 (上界) | B FIFO 截断 | C StructAgent | C − B |
-|:-------:|:------------:|:-----------:|:-------------:|:-----:|
-| 20  | 100% | 100% | 100% | +0pp |
-| 40  | 100% | 100% | 100% | +0pp |
-| 80  | 100% | 100% | 100% | +0pp |
-| 160 | 100% | **33%** | **100%** | **+67pp** |
-
-- **A** = no management (upper bound, but unbounded token cost)
-- **B** = FIFO truncation at a 4000-token window (what most agents do today)
-- **C** = StructAgent (summarize → capsule → recall)
-
-At 160 rounds, FIFO has already thrown away **60–67%** of the target knowledge (exact % depends on where the target topic sits); StructAgent keeps **100%** while compressing the prompt by **~98%** (~76–78% token savings vs. raw A).
-
-**Validated on a real LLM (GLM-4-flash, full 12-config run):** A=100% · B=83.3% · **C=100%** (+16.7pp on average; **+67pp at 160 rounds** where FIFO collapses to 33%), 98% compression, 76% token savings vs. raw A. Bonus: because the prompt is compressed to ~758 tokens, **C's TTFT is actually the fastest of the three** (16s vs. A's 37s) — StructAgent makes the call both smarter *and* quicker. The forgetting curve and the C≈A advantage hold with a real model, not just in deterministic mode.
-
-> Numbers above the table are **deterministic-mode** (no LLM needed — see [Running the benchmark](#running-the-benchmark)); the per-row gradient is the documented A/B/C design. The real-LLM smoke confirms the qualitative result. A full 12-length × 3-repeat real-LLM run is in progress; expected C ≥ 75% (honest > perfect — see below).
+你会发现，FIFO 截断 160 轮后只能记住 33% 的东西，StructAgent 能记住 100% — 而且发出去的 token 少了 76%。
 
 ---
 
-## How it works
+## 这个项目是什么（以及不是什么）
 
-StructAgent is **not compression. It is attention management.**
+**不是**一个 agent 框架。**不是**一个向量数据库。**不是**一个要长期维护的产品。
 
-```
-feed()  ──►  accumulate entries
-              │
-flush() ──►  summarize old context → pack into a Capsule (L0 summary + chunk summaries)
-              │
-recall() ──►  on a new query, semantically match capsules + evicted content → inject relevant context
-              │
-evict()  ──►  push low-relevance originals to disk (reversible), keep a pointer in the window
-```
+**是**一个人花了 9 天从零写出来的实验，想看看"管理注意力"能不能比"删东西"更好用。
 
-Four primitives, in order:
-
-1. **概括 (Summarize)** — old entries are compressed into a capsule by an injected LLM (or a deterministic fallback when no LLM is configured).
-2. **胶囊 (Capsule)** — a structured, disk-persisted knowledge pack with `chunkSummaries` for semantic search.
-3. **指针 (Pointer)** — the full original text is evicted to `ContentStore`; only a lightweight pointer stays in the active window. Reversible: recalled content can be expanded back.
-4. **语义召回 (Semantic Recall)** — on each query, StructAgent matches capsules + evicted content and injects *only what's relevant*.
-
-Because eviction is reversible and recall is semantic (not ID-blind), StructAgent keeps the conversation **both forgetful-of-noise and loyal-to-facts**.
+这个项目有一个自然的保质期。当 1000 万 token 上下文窗口变成标配（可能就一两年），这个中间层就没有存在的必要了。在那之前，如果你被 FIFO 截断坑过，它也许能帮上忙。
 
 ---
 
-## Quick Start
+## 跑分（GLM-4-flash，真实 LLM，12 格 NIAH）
+
+| 上下文长度 | 深度 | FIFO 截断 | StructAgent |
+|:---:|:---:|:---:|:---:|
+| 4K | Start | ✅ | ✅ |
+| 4K | Mid | ✅ | ✅ |
+| 4K | End | ✅ | ✅ |
+| 16K | Start | ❌ | ✅ |
+| 16K | Mid | ✅ | ✅ |
+| 16K | End | ✅ | ✅ |
+| 32K | Start | ❌ | ✅ |
+| 32K | Mid | ✅ | ✅ |
+| 32K | End | ✅ | ✅ |
+| 64K | Start | ✅ | ✅ |
+| 64K | Mid | ✅ | ✅ |
+| 64K | End | ✅ | ✅ |
+
+- **FIFO 截断**: 10/12 (83%)
+- **StructAgent**: **12/12 (100%)**
+- **StructAgent 截救了 2 个 FIFO 翻车的格子**（16K 和 32K 入口处）
+
+长上下文召回 benchmark（160 轮对话，确定性模式）：
+
+| 轮数 | 裸跑 | FIFO 截断 | StructAgent |
+|:---:|:---:|:---:|:---:|
+| 20 | 100% | 100% | 100% |
+| 40 | 100% | 100% | 100% |
+| 80 | 100% | 100% | 100% |
+| 160 | 100% | 33% | 100% |
+
+真实 LLM 完整 benchmark 报告：[benchmark-result-glm4_20260720.md](./benchmark-result-glm4_20260720.md)
+
+---
+
+## 怎么用
 
 ```bash
-# Prerequisites: Node.js >= 20, pnpm >= 9
 pnpm install
 ```
-
-Three lines to wrap any hand-rolled agent (Mode 1 — function wrapping):
 
 ```typescript
 import { LongContextEngine } from "@struct/context";
 
-// 1. Create the engine (llmCall is optional — omit it for deterministic mode)
 const engine = new LongContextEngine({
-  llmCall: (prompt) => myLLM.chat([{ role: "user", content: prompt }]),
+  llmCall: (prompt) => yourLLM.chat([{ role: "user", content: prompt }]),
 });
 
-// 2. Feed your history, then ask — StructAgent manages the window + recalls relevant context
-engine.feedBatch(history);                       // history: { content, source?, type? }[]
+engine.feedBatch(history);
 const recent = engine.getContextManager().toMessages(systemPrompt);
 const { injectText } = await engine.recall(userQuery);
-const managed = injectText && !injectText.includes("未找到")
-  ? [...recent, { role: "system", content: `Related history:\n${injectText}` }]
-  : recent;
-
-const reply = await myLLM.chat(managed);
-engine.feed(reply, { type: "observation" });     // 3. Feed the reply back in
 ```
 
-That's the whole integration. **No framework changes.** See [`docs/opensource-launch-guide.md`](./docs/opensource-launch-guide.md) for the three integration modes.
+就是这样。把 `messages` 数组交给 StructAgent 管，别的不用改。
 
 ---
 
-## Why does this exist
+## Package 结构
 
-Context-window management is a solved problem *until it isn't*. Today's agents silently drop context via FIFO and call it a day. StructAgent is the honest middle ground: **attention management instead of blind truncation**.
-
-Be aware: this is a **transitional project**. In a year or two, when 10M-token contexts are standard, a layer like this becomes unnecessary and will be retired. *Right now, you need it.* This is a **9-day solo sprint from zero to a working benchmark** — that short arc is the point, not a bug.
-
----
-
-## Packages
-
-| Package | Responsibility |
-|---------|---------------|
-| `@struct/context` | The context engine (this repo's core). `LongContextEngine`, `ContextManager`, `ContentStore`, `CapsuleStore`, and the `ContextMiddleware` integration contract. Import it standalone. |
-| `struct-app` | Electron desktop shell (chat UI + context engine). |
-| `@struct/mcp` | MCP Server (JSON-RPC 2.0 over stdio) so Claude Code / other MCP clients can consume the engine. |
+| 包 | 干什么的 |
+|---|---|
+| `@struct/context` | 核心引擎。`LongContextEngine`、`ContextManager`、`ContentStore`、`CapsuleStore` |
+| `struct-app` | Electron 桌面壳（只有骨架） |
+| `@struct/mcp` | MCP Server，让 Claude Code 等能调用引擎 |
 
 ---
 
-## Compatibility
+## 已知问题（诚实列表）
 
-StructAgent integrates by intercepting the `messages` array. Status:
-
-| Platform | Status | Integration mode | Notes |
-|----------|:------:|:----------------:|-------|
-| Bare LLM call | ✅ | Mode 1 — function wrapping | Benchmarked (see above) |
-| OpenClaw | ✅ | Mode 2 — middleware hook | `beforeLlmCall` / `afterLlmCall` |
-| CodeX | ⚠️ | Mode 2 — middleware hook | Welcome to test; needs the hook docs |
-| LangChain | ⚠️ | Mode 1 — function wrapping | Easy for community contributors |
-| Cursor / Copilot | ❌ | — | Closed-source IDE plugins, no hook surface |
-| Claude Desktop (MCP) | ⚠️ | Mode 3 — HTTP sidecar | Needs extra dev; community welcome |
-| Any HTTP agent | ⚠️ | Mode 3 — HTTP sidecar | Needs extra dev; community welcome |
-
-- **Mode 1** (function wrapping) and **Mode 2** (`createContextMiddleware(engine, opts)` — a framework-agnostic contract) ship today.
-- **Mode 3** (HTTP sidecar / Python wrapper) is **intentionally not built yet** — it's only worth writing when someone in the community actually asks "how do I use this from Python?". Then it's a ~50-line FastAPI wrapper.
-
-### Persistence (self-test)
-
-Capsules and evicted content are written to disk. Verified: `flush()` a capsule → start a **new engine instance on the same directory** → `recall()` returns the same context. Cross-process memory works out of the box.
+- **没有单元测试覆盖长上下文下真实 LLM 的表现。** 测试套件 125 个全部通过，但都是 mock 模式。GLM-4-flash 的跑分只跑了 12 格 NIAH，更长的场景没测。
+- **DocQA 在 230K chars 超窗口时翻车了。** CM 诚实地说"我不知道"，但基线碰巧蒙对了。GLM-4-flash 的 128K 上下文窗口不够大，需要换更大窗口的模型验证。
+- **仅测试过 GLM-4-flash。** 没有测试其他模型（Qwen、DeepSeek、GPT-4o 等）。
+- **capsule 的 LLM 概括质量没系统评估。** 确定性回退和 LLM 概括在短对话上差异不大（之前测出 LLM 25.7% vs 确定性 23.3% 召回率，368 倍延迟）。
+- **没有 Windows 以外的 CI。** 只在我自己的 Windows 台式机上跑过。
+- **MCP 集成只画了架构，没有端到端测试。**
+- **Electron 桌面壳是空壳，不能跑。**
 
 ---
 
-## Running the benchmark
+## 希望社区帮忙测什么
+
+这个项目是我一个人写的，我只有一台 Windows 台式机。以下是我自己没条件测、但很想知道的：
+
+- **其他 LLM 上的表现** — Qwen、DeepSeek、GPT-4o、Claude 等
+- **macOS / Linux 上的兼容性** — 我只有 Windows
+- **集成到现有 agent 框架的坑** — LangChain、CrewAI、AutoGPT、你手搓的 agent
+- **233K+ 窗口的真正大模型跑 DocQA** — qwen-plus 的 131K 还不够，可能需要 Claude 的 200K
+- **生产环境下的磁盘和内存占用** — ContentStore 在几千条记录下表现如何
+- **capsule 概括中文 vs 英文的差异** — 我只测过中文
+
+如果你跑了其中任何一个，**开个 Issue 告诉我结果**。就算结果是"StructAgent 在这个模型上没用"，我也想知道。
+
+---
+
+## 怎么参与
+
+### ✅ 开 Issue — 非常欢迎
+
+- Bug 报告
+- 兼容性反馈（"我在 XXX 上试了，结果是……"）
+- "FIFO 比 StructAgent 好的场景" — 这种反面数据特别有价值
+- 建议和批判
+
+### ❌ 提 Pull Request — 暂不接受
+
+这是一个人维护的过渡项目。我没有精力做 code review、维护 contributor 指南、或者协调多人开发。
+
+如果你真的有改进方案：**fork 它，改好，开个 Issue 贴上你 fork 的链接。** 如果你的 fork 解决了真正的问题，我会链接过去。
+
+---
+
+## 跑 benchmark
 
 ```bash
-# Deterministic (no API key needed) — reproduces the table above
+# 确定性模式（不需要 API Key）
 npx tsx packages/context/benchmark/index.ts --full --mock
 
-# Real LLM — set a key, then run. Expects C ≥ 75% on GLM-4-flash.
-export GLM_API_KEY="..."
-npx tsx packages/context/benchmark/index.ts --full
-
-# Topic-position sweep (near / middle / far) for the §3.3 distribution
-npx tsx packages/context/benchmark/index.ts --full --sweep
+# 真实 LLM
+$env:LLM_BASE_URL="https://open.bigmodel.cn/api/paas/v4"
+$env:LLM_API_KEY="你的key"
+$env:LLM_MODEL="glm-4-flash"
+npx tsx packages/context/bench/run.ts
 ```
-
-Reports land in `packages/context/benchmark/results/` as `.md` / `.json` / `.csv`.
-
----
-
-## What we don't accept
-
-This is a solo, transitional project. To keep it honest and maintainable:
-
-- **Issues: yes.** Bug reports, sharp critiques, and "here's where FIFO beat you" stories are all welcome.
-- **PRs: no (for now).** Don't send pull requests. Fork it, hack on it, ship your own variant. If your fork proves something, open an Issue linking to it — that's the fastest path.
-- **No CI/CD, no GitHub Actions.** `pnpm test` and `pnpm typecheck` are the contract.
-- **No 100% coverage theater.** It's a bridge project, not a production system.
-- **No fake commits.** The 30-commit, 9-day arc is real. Don't manufacture history.
 
 ---
 
 ## License
 
-[MIT](./LICENSE) © 2026 StructAgent Contributors
+[MIT](./LICENSE)
