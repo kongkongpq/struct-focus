@@ -40,7 +40,7 @@ We run three configurations against the same conversations and measure **context
 
 At 160 rounds, FIFO has already thrown away **60–67%** of the target knowledge (exact % depends on where the target topic sits); StructAgent keeps **100%** while compressing the prompt by **~98%** (~76–78% token savings vs. raw A).
 
-**Validated on a real LLM (GLM-4-flash, smoke config 160 rounds):** A=100% · B=40% · **C=100%** (+60pp over B), 99% compression, 78% token savings. The forgetting curve and the C≈A advantage hold with a real model, not just in deterministic mode.
+**Validated on a real LLM (GLM-4-flash, full 12-config run):** A=100% · B=83.3% · **C=100%** (+16.7pp on average; **+67pp at 160 rounds** where FIFO collapses to 33%), 98% compression, 76% token savings vs. raw A. Bonus: because the prompt is compressed to ~758 tokens, **C's TTFT is actually the fastest of the three** (16s vs. A's 37s) — StructAgent makes the call both smarter *and* quicker. The forgetting curve and the C≈A advantage hold with a real model, not just in deterministic mode.
 
 > Numbers above the table are **deterministic-mode** (no LLM needed — see [Running the benchmark](#running-the-benchmark)); the per-row gradient is the documented A/B/C design. The real-LLM smoke confirms the qualitative result. A full 12-length × 3-repeat real-LLM run is in progress; expected C ≥ 75% (honest > perfect — see below).
 

@@ -16,6 +16,14 @@ import { Pipeline, type NamedMiddleware } from "@struct/framework";
 import { PointerRegistry } from "./pointer.js";
 import { BudgetManager, TOTAL_BUDGET, FIXED_OVERHEAD } from "./budget.js";
 import { CodeExplorer } from "./explorer.js";
+import type {
+  ContextEntry,
+  TaskContext,
+  ContextPlacement,
+  LLMMessage,
+  EntryType,
+  CacheControlBreakpoint,
+} from "./types.js";
 
 /** 辅助：创建带 name 的 NamedMiddleware（绕过函数 name 只读限制） */
 function named<T>(name: string, fn: (ctx: T, next: () => Promise<void>) => Promise<void>): NamedMiddleware<T> {
@@ -235,4 +243,163 @@ export class ContextBuilder implements IContextBuilder {
 
       await next();
     });
+}
+
+// ─── 六层 Context Builder 管线（设计 §3 / LongContextRecall 扩展 2026-07-19） ───
+//
+// 把内部 ContextEntry[] 组装成下一轮 LLM 输入（LLMMessage[]）。
+// 逻辑上区分 I-Context（指令/系统，前缀缓存稳定）与 D-Context（数据，可压缩/驱逐），
+// 物理上同处一个上下文窗口。
+//
+// 分层：
+//   L1 System    —— 系统提示（稳定，打 cacheControl 断点）
+//   L2 Git       —— 项目上下文：当前分支 / 改动文件（可选，detectGitInfo 提供）
+//   L3 Task      —— 任务上下文：编辑文件 / 失败测试 / 子任务 / 最近错误
+//   L4 Focused   —— 聚焦层：显式强调当前聚焦文件（与 D-Context 中的受保护条目呼应）
+//   L5 History   —— 历史层：按时间顺序渲染所有活跃条目
+//                   - L2_working: 完整渲染当前工作和最近对话
+//                   - L3_compressed: 替换为 ~100 token observation（胶囊摘要 + expand 指令）
+//                   - L4_raw: 不渲染（仅在精确召回时从 ContentStore 取出）
+//   L6 Budget    —— 预算检查层：高占用时追加一行告警（真正的驱逐决策在 autoManage）
+
+const ROLE_BY_TYPE: Record<EntryType, LLMMessage["role"]> = {
+  system: "system",
+  user: "user",
+  assistant: "assistant",
+  tool: "tool",
+  memory: "user",
+  observation: "user",
+};
+
+function tagFor(e: ContextEntry): string {
+  if (e.type === "memory") return "[memory] ";
+  if (e.type === "observation") return "[observation] ";
+  if (e.sourceType) return `[${e.sourceType}] `;
+  return "";
+}
+
+/** L1：系统提示 */
+function buildSystem(input: BuildContextInput): LLMMessage {
+  return {
+    role: "system",
+    content: input.systemPrompt,
+    cacheControl: { type: "ephemeral" } satisfies CacheControlBreakpoint,
+  };
+}
+
+/** L2：Git 项目上下文（可选） */
+function buildGit(input: BuildContextInput): LLMMessage | null {
+  if (!input.gitInfo || input.gitInfo.trim().length === 0) return null;
+  return {
+    role: "system",
+    content: `## 项目上下文（git）\n${input.gitInfo.trim()}`,
+  };
+}
+
+/** L3：任务上下文 */
+function buildTask(tc: TaskContext): LLMMessage | null {
+  const lines = ["## 当前任务上下文"];
+  if (tc.editingFiles.length) lines.push(`- 编辑中文件：${tc.editingFiles.join(", ")}`);
+  if (tc.failingTests.length) lines.push(`- 失败测试：${tc.failingTests.join(", ")}`);
+  if (tc.currentSubtasks.length) lines.push(`- 子任务：${tc.currentSubtasks.join(" / ")}`);
+  if (tc.focusedSymbols.length) lines.push(`- 聚焦符号：${tc.focusedSymbols.join(", ")}`);
+  if (tc.recentErrors.length) {
+    lines.push("- 最近错误：");
+    for (const e of tc.recentErrors.slice(0, 5)) {
+      lines.push(`  - ${e.file ? `[${e.file}] ` : ""}${e.message}`);
+    }
+  }
+  if (lines.length === 1) return null;
+  return { role: "system", content: lines.join("\n") };
+}
+
+/** L4：聚焦层（强调当前聚焦文件） */
+function buildFocused(tc: TaskContext, entries: ContextEntry[]): LLMMessage | null {
+  if (tc.editingFiles.length === 0) return null;
+  const protectedIds = new Set(
+    entries
+      .filter((e) => e.protectedBy === "editingFile" && e.source && tc.editingFiles.includes(e.source))
+      .map((e) => e.id),
+  );
+  const lines = ["## 聚焦文件（受保护，绝不驱逐）"];
+  for (const f of tc.editingFiles) {
+    const present = protectedIds.size > 0 && entries.some((e) => e.source === f && protectedIds.has(e.id));
+    lines.push(`- ${f}${present ? "  ✓ 已在上下文" : ""}`);
+  }
+  return { role: "system", content: lines.join("\n") };
+}
+
+/** L5：历史层（按时间顺序渲染活跃条目，保持原始 user/assistant 交替结构） */
+function buildHistory(entries: ContextEntry[], placementMap?: Map<string, ContextPlacement>): LLMMessage[] {
+  const ordered = [...entries].sort((a, b) => a.timestamp - b.timestamp);
+  const messages: LLMMessage[] = [];
+  for (const e of ordered) {
+    // placementMap 优先，回退到条目自带 placement（与 manager.toMessages 一致）
+    const placement = placementMap?.get(e.id) ?? e.placement;
+    // L4_raw：不渲染
+    if (placement?.target === "L4_raw") continue;
+    // L3_compressed：替换为胶囊摘要
+    if (placement?.target === "L3_compressed") {
+      const summary =
+        placement.capsuleSummary ??
+        (e.compressed && e.compressedContent ? e.compressedContent : e.content.slice(0, 200));
+      messages.push({
+        role: "user",
+        content: `📦 [胶囊] ${summary}\n调用 expand:context("${e.id}") 展开完整记录`,
+      });
+      continue;
+    }
+    // L2_working：按原始类型渲染
+    const text = e.compressed && e.compressedContent ? e.compressedContent : e.content;
+    const role =
+      e.type === "observation" || e.type === "tool"
+        ? "user" // API 工具输出用 user 角色
+        : e.type === "memory"
+          ? "user"
+          : ROLE_BY_TYPE[e.type] ?? "user";
+    // 保留原始类型标记但不破坏角色交替：user/assistant 不加前缀，其他加轻量标记
+    const prefix = e.type === "user" || e.type === "assistant" ? "" : tagFor(e);
+    messages.push({ role, content: `${prefix}${text}` });
+  }
+  return messages;
+}
+
+/** L6：预算检查层（高占用告警） */
+function buildBudget(usePercent: number): LLMMessage | null {
+  if (usePercent < 85) return null;
+  const level = usePercent >= 90 ? "紧急" : "偏高";
+  return {
+    role: "system",
+    content: `⚠️ 上下文占用 ${usePercent.toFixed(0)}%（${level}）。引擎已在每步自动管理（驱逐/压缩/聚焦）；如仍超限，请主动 forget 非必要文件。`,
+  };
+}
+
+/**
+ * 组装上下文（六层管线）。纯函数，无副作用。
+ * ContextManager.toMessages 的底层实现。
+ */
+export interface BuildContextInput {
+  systemPrompt: string;
+  entries: ContextEntry[];
+  taskContext?: TaskContext;
+  usePercent: number;
+  gitInfo?: string;
+  placementMap: Map<string, ContextPlacement>;
+}
+
+export function buildContext(input: BuildContextInput): LLMMessage[] {
+  // 仅渲染活跃条目（已驱逐的不进入下一轮 LLM 输入）
+  const entries = input.entries.filter((e) => !e.evicted);
+  const messages: LLMMessage[] = [];
+  messages.push(buildSystem(input));
+  const git = buildGit(input);
+  if (git) messages.push(git);
+  const task = input.taskContext ? buildTask(input.taskContext) : null;
+  if (task) messages.push(task);
+  const focused = input.taskContext ? buildFocused(input.taskContext, entries) : null;
+  if (focused) messages.push(focused);
+  messages.push(...buildHistory(entries, input.placementMap));
+  const budget = buildBudget(input.usePercent);
+  if (budget) messages.push(budget);
+  return messages;
 }

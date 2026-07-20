@@ -13,7 +13,7 @@ export interface StoredContent {
   originalContent: string;
   originalTokenCount: number;
   savedAt: number;
-  reason: "truncate" | "evict" | "forget" | "auto-remember" | "summarize" | "new-conversation";
+  reason: "truncate" | "evict" | "forget" | "auto-remember" | "summarize" | "new-conversation" | "downgrade_L4";
   source?: string;
   sourceType?: string;
   capsuleSummary?: string;

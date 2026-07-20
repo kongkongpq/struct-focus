@@ -28,33 +28,41 @@ describe("ContextManager 基础", () => {
   });
 });
 
-describe("autoManage 三层管理", () => {
-  it("层0 (≥70% 且 <85%)：驱逐低价值条目", () => {
-    const m = new ContextManager({ maxWindow: 4000 });
-    // 小步追加，精确填充到 70%~85% 区间
-    let guard = 0;
-    while (m.getStats().usePercent < 76 && guard++ < 500) fillNoise(m, 1, 50);
-    expect(m.getStats().usePercent).toBeGreaterThanOrEqual(70);
-    expect(m.getStats().usePercent).toBeLessThan(85);
-    const beforeCount = m.getEntries().length;
+describe("autoManage 四层降级管理", () => {
+  it("L0 (≥20% 非活跃)：标记不执行", () => {
+    const m = new ContextManager({ maxWindow: 400_000 });
+    // 先追加一些活跃对话
+    m.appendUser("hello");
+    m.appendAssistant("hi there");
+    // 追加大量旧条目使其距离话题远
+    for (let i = 0; i < 30; i++) {
+      m.appendUser(`old message ${i}`);
+      m.appendAssistant(`old reply ${i}`);
+    }
+    // 把话题距离设小，让前面的全变"非活跃"
+    m.setManagementPolicy({ topicDistance: 2 });
     const report = m.manage();
-    expect(report.triggerLevel).toBe(0);
-    expect(report.evictedCount).toBeGreaterThan(0);
-    expect(m.getEntries().length).toBeLessThan(beforeCount);
+    // 非活跃占比足够多时触发标记（L0）
+    expect(report.triggerLevel).toBeGreaterThanOrEqual(0);
+    // L0 只标记不降级，条目还在
+    expect(m.getEntries().length).toBeGreaterThan(30);
   });
 
-  it("层1 (≥85% 且 <90%)：驱逐 + 压缩 + 截断", () => {
-    const m = new ContextManager({ maxWindow: 4000 });
-    let guard = 0;
-    while (m.getStats().usePercent < 88 && guard++ < 500) fillNoise(m, 1, 50);
-    expect(m.getStats().usePercent).toBeGreaterThanOrEqual(85);
-    expect(m.getStats().usePercent).toBeLessThan(90);
+  it("L1 (非活跃达 hardThreshold)：概括归档", () => {
+    const m = new ContextManager({ maxWindow: 400_000 });
+    m.appendUser("current work");
+    m.appendAssistant("working on it");
+    for (let i = 0; i < 50; i++) {
+      m.appendUser(`old msg ${i} `.repeat(10));
+    }
+    m.setManagementPolicy({ hardThreshold: 0.5, topicDistance: 2, emergencyThreshold: 0.99 });
     const report = m.manage();
+    // L1 触发概括归档，不触发 L2 紧急
     expect(report.triggerLevel).toBe(1);
-    expect(report.evictedCount).toBeGreaterThan(0);
+    expect(report.downgradedCount).toBeGreaterThan(0);
   });
 
-  it("焦点文件受 taskRelevance 保护不被驱逐", () => {
+  it("焦点文件受 taskRelevance 保护不被降级", () => {
     const tc: TaskContext = {
       currentSubtasks: [],
       editingFiles: ["pkg/x.ts"],
@@ -62,14 +70,14 @@ describe("autoManage 三层管理", () => {
       focusedSymbols: [],
       recentErrors: [],
     };
-    const m = new ContextManager({ maxWindow: 4000 });
+    const m = new ContextManager({ maxWindow: 400_000 });
     m.setTaskContext(tc);
     m.appendToolResult("important context about x", { source: "pkg/x.ts", sourceType: "file_content" });
-    fillNoise(m, 60);
+    for (let i = 0; i < 40; i++) m.appendUser(`noise${i}`);
     m.setTaskContext(tc);
-    const protectedId = m.getEntries().find((e) => e.source === "pkg/x.ts")!.id;
-    m.evictEntries(1.0); // 尝试驱逐一切可驱逐的
-    const stillThere = m.getEntries().some((e) => e.id === protectedId && !e.evicted);
+    m.setManagementPolicy({ hardThreshold: 0.3, topicDistance: 2, emergencyThreshold: 0.99 });
+    m.manage(); // 四层降级
+    const stillThere = m.getEntries().some((e) => e.source === "pkg/x.ts" && !e.evicted && !e.compressed);
     expect(stillThere).toBe(true);
   });
 });

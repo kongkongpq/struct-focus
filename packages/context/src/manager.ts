@@ -1,11 +1,12 @@
-// @struct/context - ContextManager（新设计 2026-07-15）
+// @struct/context - ContextManager（四层冷热架构 2026-07-20 重构）
 //
-// 「不是压缩，是管理」：框架自动接管上下文注意力。
-// 每步 Agent loop 完成后调用 autoManage()，按窗口饱和度（usePercent）执行三层管理：
-//   层 0 (≥70%)：价值驱逐（evictEntries，15%）
-//   层 1 (≥85%)：驱逐(25%) + structuredCompress + 截断(>2000 tok)
-//   层 2 (≥90%)：强制 forget 非聚焦文件
-// 辅以 preprocessToolOutput 六阶段去噪、taskRelevance 加权驱逐、注意力浪费度量、autoRecall 记忆注入。
+// 「不是驱逐，是降级」：框架自动按冷热分层管理上下文。
+// 每步 Agent loop 完成后调用 autoManage()，按非活跃内容占比执行四层管理：
+//   L2→L3 (≥20% 非活跃)：标记/分组/预压缩评估 → 概括归档为胶囊
+//   L2→L3 (≥50% 非活跃)：执行概括归档 + 压缩
+//   L3→L4 (≥85% 总 token)：最冷 L3 条目原文迁移到 ContentStore 深存
+//   L1 自动学习：每次 flush 后从胶囊提取永久知识
+// 辅以 preprocessToolOutput 六阶段去噪、taskRelevance 加权、注意力浪费度量、autoRecall 记忆注入。
 // 无 LLM 调用、无外部重依赖（token 估算走注入式 BudgetManager）。
 
 import {
@@ -19,6 +20,7 @@ import {
   type ContextPlacement,
   type PlacementLevel,
   type PlacementSource,
+  type ManagementPolicy,
   type CapacityAlert,
   type TaskContext,
   type AutoManageReport,
@@ -27,13 +29,9 @@ import {
   type AttentionWaste,
   ContextPlacementConflictError,
   EMPTY_TASK_CONTEXT,
+  DEFAULT_MANAGEMENT_POLICY,
   CAPACITY_ENFORCE_THRESHOLD,
   CAPACITY_ENFORCE_STEPS,
-  EVICT_THRESHOLD_0,
-  EVICT_THRESHOLD_1,
-  EVICT_THRESHOLD_2,
-  EVICT_RATIO_0,
-  EVICT_RATIO_1,
   TRUNCATE_THRESHOLD,
   TRUNCATE_HEAD,
   TRUNCATE_TAIL,
@@ -56,16 +54,18 @@ import path from "node:path";
 
 export interface ManageResult {
   usePercent: number;
+  inactivePercent: number;
   triggerLevel: -1 | 0 | 1 | 2;
-  evictedCount: number;
-  evictedTokens: number;
+  downgradedCount: number;
+  downgradedTokens: number;
   compressedCount: number;
   truncatedCount: number;
+  l4MigratedCount: number;
 }
 
-export interface EvictResult {
-  evictedCount: number;
-  evictedTokens: number;
+export interface DowngradeResult {
+  downgradedCount: number;
+  downgradedTokens: number;
 }
 
 /** 召回的原始内容 + 摘要 */
@@ -286,6 +286,8 @@ export class ContextManager {
   private llmCall: ((prompt: string) => Promise<string>) | null = null;
   /** 容量告警计数器（连续达到阈值的步数） */
   private capacityExceededSteps = 0;
+  /** 管理策略（用户可调） */
+  private managementPolicy: ManagementPolicy = { ...DEFAULT_MANAGEMENT_POLICY };
 
   constructor(opts: ContextManagerOptions = {}) {
     this.maxWindow = opts.maxWindow ?? getMaxContextWindow();
@@ -658,9 +660,21 @@ export class ContextManager {
     }
   }
 
+  // ─── 管理策略配置 ────────────────────────────────────
+
+  /** 设置管理策略（用户可随时调整阈值和模式） */
+  setManagementPolicy(policy: Partial<ManagementPolicy>): void {
+    this.managementPolicy = { ...this.managementPolicy, ...policy };
+    this.logger.debug(`managementPolicy: soft=${this.managementPolicy.softThreshold} hard=${this.managementPolicy.hardThreshold} emergency=${this.managementPolicy.emergencyThreshold} mode=${this.managementPolicy.userOverride}`);
+  }
+
+  getManagementPolicy(): ManagementPolicy {
+    return { ...this.managementPolicy };
+  }
+
   // ─── 自动管理（核心） ──────────────────────────────────
 
-  /** 每步调用：autoFocus + autoRecall + 三层管理 */
+  /** 每步调用：autoFocus + autoRecall + 四层降级管理 */
   async autoManage(): Promise<AutoManageReport> {
     // Gap：自动 focus 当前编辑文件
     if (this.taskContext.editingFiles.length) {
@@ -675,7 +689,7 @@ export class ContextManager {
     const recalledMemories = await this.autoRecall();
     // 持续清理：每次 autoManage 都跑（不依赖阈值）
     const continuous = this.manageContinuous();
-    // 三层管理（阈值触发）
+    // 四层降级管理（阈值触发）
     const result = this.manage();
     // 守护轨质询（冲突检测 / 缺口检测 / 一致性检测）
     const inquiry = await this.runInquiry();
@@ -684,11 +698,15 @@ export class ContextManager {
 
     return {
       usePercent: result.usePercent,
+      inactivePercent: result.inactivePercent,
       triggerLevel: result.triggerLevel,
-      evictedCount: result.evictedCount + continuous.noiseCleaned + continuous.decayEvicted,
-      evictedTokens: result.evictedTokens + continuous.noiseTokens + continuous.decayTokens,
+      downgradedCount: result.downgradedCount + continuous.noiseCleaned + continuous.decayEvicted,
+      downgradedTokens: result.downgradedTokens + continuous.noiseTokens + continuous.decayTokens,
+      evictedCount: result.downgradedCount + continuous.noiseCleaned + continuous.decayEvicted,
+      evictedTokens: result.downgradedTokens + continuous.noiseTokens + continuous.decayTokens,
       compressedCount: result.compressedCount,
       truncatedCount: result.truncatedCount,
+      l4MigratedCount: result.l4MigratedCount,
       focusedFiles: [...this.focusedFiles],
       recalledMemories,
       inquiry: inquiry.hasReport ? { conflicts: inquiry.conflicts, gaps: inquiry.gaps, injected: inquiry.injectedCount } : undefined,
@@ -758,77 +776,251 @@ export class ContextManager {
   }
 
   /** 三层管理（autoManage 内部调用）。返回本步结果与触发层级 */
+  /**
+   * 四层降级管理（替代旧的三层驱逐）。
+   *
+   * 核心理念：不驱逐，只降冷。
+   *   - 计算非活跃内容占比（非活跃 = 距当前话题 ≥ topicDistance 轮 或 N 秒未更新）
+   *   - ≥ softThreshold → 标记/分组/预压缩评估，但不执行
+   *   - ≥ hardThreshold → 执行概括归档 L2→L3（压缩旧对话为胶囊）
+   *   - ≥ emergencyThreshold → L3→L4（最冷胶囊原文迁移到 ContentStore）
+   */
   manage(): ManageResult {
-    const usePercent = this.getStats().usePercent;
+    const stats = this.getStats();
+    const usePercent = stats.usePercent;
+    const policy = this.managementPolicy;
     let triggerLevel: -1 | 0 | 1 | 2 = -1;
-    let evictedCount = 0;
-    let evictedTokens = 0;
+    let downgradedCount = 0;
+    let downgradedTokens = 0;
     let compressedCount = 0;
     let truncatedCount = 0;
+    let l4MigratedCount = 0;
 
-    if (usePercent >= EVICT_THRESHOLD_0) {
+    // 计算非活跃占比
+    const inactivePercent = this.computeInactivePercent();
+
+    // Level 0: 软阈值 → 标记 + 预压缩评估（不执行）
+    if (inactivePercent >= policy.softThreshold) {
       triggerLevel = 0;
-      const r = this.evictEntries(EVICT_RATIO_0);
-      evictedCount += r.evictedCount;
-      evictedTokens += r.evictedTokens;
+      this.logger.debug(
+        `manage L0: inactive=${inactivePercent.toFixed(0)}% ≥ soft=${policy.softThreshold}, 标记非活跃条目`,
+      );
+      this.markInactiveEntries();
     }
-    if (usePercent >= EVICT_THRESHOLD_1) {
+
+    // Level 1: 硬阈值 → 概括归档 L2→L3
+    if (inactivePercent >= policy.hardThreshold) {
       triggerLevel = 1;
-      const r = this.evictEntries(EVICT_RATIO_1);
-      evictedCount += r.evictedCount;
-      evictedTokens += r.evictedTokens;
+      this.logger.debug(
+        `manage L1: inactive=${inactivePercent.toFixed(0)}% ≥ hard=${policy.hardThreshold}, 概括归档`,
+      );
+      const downgraded = this.downgradeToL3();
+      downgradedCount += downgraded.downgradedCount;
+      downgradedTokens += downgraded.downgradedTokens;
       compressedCount = this.compressOldEntries();
       truncatedCount = this.truncateLongEntries();
     }
-    if (usePercent >= EVICT_THRESHOLD_2) {
+
+    // Level 2: 紧急阈值 → L3→L4 深存
+    if (usePercent >= policy.emergencyThreshold) {
       triggerLevel = 2;
+      this.logger.debug(
+        `manage L2: use=${usePercent.toFixed(0)}% ≥ emergency=${policy.emergencyThreshold}, L3→L4 深存`,
+      );
+      l4MigratedCount = this.downgradeColdestL3ToL4();
       this.forceForgetNonFocused();
     }
 
     return {
       usePercent: this.getStats().usePercent,
+      inactivePercent,
       triggerLevel,
-      evictedCount,
-      evictedTokens,
+      downgradedCount,
+      downgradedTokens,
       compressedCount,
       truncatedCount,
+      l4MigratedCount,
     };
   }
 
   /**
-   * 按 evictionScore（保护分，越高越该保留）驱逐最低 ratio 比例的条目。
-   * 受保护（taskRelevance≤0.25）与 system 条目不参与。
-   * 驱逐前将完整原文写入 ContentStore，支持 expandEntry 还原。
+   * 计算非活跃内容占窗口的比例。
+   * 非活跃 = 距当前活跃话题 ≥ topicDistance 轮 或 超过 ageThresholdMs 未更新。
    */
-  evictEntries(ratio: number, _taskContext?: TaskContext | null): EvictResult {
-    const candidates = this.entries.filter(
-      (e) => !e.evicted && e.type !== "system" && e.taskRelevance > 0.25,
-    );
-    const scored = candidates
-      .map((e) => ({ e, score: this.computeEvictionScore(e) }))
-      .sort((a, b) => a.score - b.score); // 升序：最低（最该驱逐）在前
-    const n = Math.max(0, Math.floor(candidates.length * ratio));
-    let evictedTokens = 0;
-    for (let i = 0; i < n; i++) {
-      const { e } = scored[i]!;
-      const idx = this.entries.indexOf(e);
-      const wasted = e.tokenCount;
-      // 驱逐前保存完整原文到 ContentStore
-      const toSave = e.originalContent ?? e.content;
-      this.entries[idx] = { ...e, evicted: true, evictedAt: Date.now(), externalRef: `ext://${e.id}` };
-      this.store.save({
-        entryId: e.id,
-        originalContent: toSave,
-        originalTokenCount: e.tokenCount,
-        savedAt: Date.now(),
-        reason: "evict",
-        source: e.source,
-        sourceType: e.sourceType,
-      }).catch((err) => this.logger.warn(`ContentStore save evict failed: ${String(err)}`));
-      this.updateAttentionWaste(wasted, e.sourceType ?? e.type, "evict");
-      evictedTokens += wasted;
+  private computeInactivePercent(): number {
+    const policy = this.managementPolicy;
+    const active = this.entries.filter((e) => !e.evicted);
+    if (active.length === 0) return 0;
+
+    const now = Date.now();
+    const ageThresholdMs = 5 * 60 * 1000; // 5 分钟未更新视为非活跃
+
+    // 找到当前话题锚点：最近一条 user/assistant 消息
+    let lastActiveIdx = -1;
+    for (let i = active.length - 1; i >= 0; i--) {
+      const e = active[i]!;
+      if (e.type === "user" || e.type === "assistant") {
+        lastActiveIdx = i;
+        break;
+      }
     }
-    return { evictedCount: n, evictedTokens };
+
+    const activeTokens = active.reduce((s, e) => s + e.tokenCount, 0);
+    if (activeTokens === 0) return 0;
+
+    let inactiveTokens = 0;
+    for (let i = 0; i < active.length; i++) {
+      const e = active[i]!;
+      // 距离话题锚点超过 topicDistance 轮 → 非活跃
+      if (lastActiveIdx >= 0 && lastActiveIdx - i > policy.topicDistance) {
+        inactiveTokens += e.tokenCount;
+        continue;
+      }
+      // 超时未更新 → 非活跃
+      if (e.timestamp > 0 && now - e.timestamp > ageThresholdMs) {
+        inactiveTokens += e.tokenCount;
+        continue;
+      }
+    }
+
+    return activeTokens > 0 ? inactiveTokens / activeTokens : 0;
+  }
+
+  /**
+   * 标记非活跃条目（为降级 L2→L3 准备候选列表）。
+   * 不执行驱逐，只打标记供后续降级使用。
+   */
+  private markInactiveEntries(): void {
+    const policy = this.managementPolicy;
+    const active = this.entries.filter((e) => !e.evicted);
+    const now = Date.now();
+    const ageThresholdMs = 5 * 60 * 1000;
+
+    // 找当前话题锚点
+    let lastActiveIdx = -1;
+    for (let i = active.length - 1; i >= 0; i--) {
+      if (active[i]!.type === "user" || active[i]!.type === "assistant") {
+        lastActiveIdx = i;
+        break;
+      }
+    }
+
+    let tagged = 0;
+    for (let i = 0; i < active.length; i++) {
+      const e = active[i]!;
+      const isInactive =
+        (lastActiveIdx >= 0 && lastActiveIdx - i > policy.topicDistance) ||
+        (e.timestamp > 0 && now - e.timestamp > ageThresholdMs);
+      if (isInactive && !e.protectedBy && e.type !== "system") {
+        // 标记为待降级：设置 placement 到 L2_working 但添加 expiresAt（过期触发 soft 降级）
+        if (!e.placement || e.placement.target === "L2_working") {
+          this.place(e.id, "L2_working", "system", `marked_inactive_at_${now}`, { expiresAt: now + 60_000 });
+          tagged++;
+        }
+      }
+    }
+    if (tagged > 0) this.logger.debug(`markInactive: ${tagged} 条目标记为非活跃`);
+  }
+
+  /**
+   * L2→L3 降级：将非活跃旧对话概括归档为胶囊。
+   * 筛选距离话题锚点 > topicDistance 轮的非系统条目，压缩其内容。
+   */
+  private downgradeToL3(): DowngradeResult {
+    const policy = this.managementPolicy;
+    const active = this.entries.filter((e) => !e.evicted && e.type !== "system");
+
+    // 找当前话题锚点
+    let lastActiveIdx = -1;
+    for (let i = active.length - 1; i >= 0; i--) {
+      if (active[i]!.type === "user" || active[i]!.type === "assistant") {
+        lastActiveIdx = i;
+        break;
+      }
+    }
+
+    const now = Date.now();
+    const ageThresholdMs = 5 * 60 * 1000;
+    let count = 0;
+    let tokens = 0;
+
+    for (let i = 0; i < active.length; i++) {
+      const e = active[i]!;
+      if (e.protectedBy || e.taskRelevance <= 0.25) continue;
+      const isInactive =
+        (lastActiveIdx >= 0 && lastActiveIdx - i > policy.topicDistance) ||
+        (e.timestamp > 0 && now - e.timestamp > ageThresholdMs);
+      if (!isInactive) continue;
+
+      // 压缩内容并降级到 L3_compressed
+      const compressed = e.content.length > 4000 ? e.content.slice(0, 2000) + `...[截断 ${e.content.length} 字符]` : e.content;
+      const idx = this.entries.findIndex((entry) => entry.id === e.id);
+      if (idx >= 0) {
+        this.entries[idx] = {
+          ...this.entries[idx]!,
+          compressed: true,
+          compressedContent: compressed,
+          compressedAt: Date.now(),
+          content: compressed,
+        };
+        this.place(e.id, "L3_compressed", "system", `downgrade_L3`);
+        count++;
+        tokens += e.tokenCount;
+      }
+    }
+
+    if (count > 0) {
+      this.logger.debug(`downgradeToL3: ${count} 条目降级 (${tokens} tokens)`);
+    }
+    return { downgradedCount: count, downgradedTokens: tokens };
+  }
+
+  /**
+   * L3→L4 深存：将最冷的 L3 条目原文迁移到 ContentStore。
+   * 按压缩时间排序，最早压缩的优先迁移。
+   */
+  private downgradeColdestL3ToL4(): number {
+    const l3Entries = this.entries
+      .filter((e) => !e.evicted && e.compressed && e.placement?.target === "L3_compressed")
+      .sort((a, b) => (a.compressedAt ?? 0) - (b.compressedAt ?? 0));
+
+    if (l3Entries.length === 0) return 0;
+
+    // 迁移最冷 20%（但至少 3 条，至多 10 条）
+    const toMigrate = Math.min(Math.max(3, Math.ceil(l3Entries.length * 0.2)), 10);
+    let count = 0;
+    for (let i = 0; i < Math.min(toMigrate, l3Entries.length); i++) {
+      const e = l3Entries[i]!;
+      const toSave = e.originalContent ?? e.content;
+      this.store
+        .save({
+          entryId: e.id,
+          originalContent: toSave,
+          originalTokenCount: e.tokenCount,
+          savedAt: Date.now(),
+          reason: "downgrade_L4",
+          source: e.source,
+          sourceType: e.sourceType,
+        })
+        .catch((err) => this.logger.warn(`downgradeToL4 save failed: ${String(err)}`));
+
+      const idx = this.entries.findIndex((entry) => entry.id === e.id);
+      if (idx >= 0) {
+        this.entries[idx] = {
+          ...this.entries[idx]!,
+          evicted: true,
+          evictedAt: Date.now(),
+          externalRef: `ext://${e.id}`,
+        };
+        this.place(e.id, "L4_raw", "system", `downgrade_L4`);
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      this.logger.debug(`downgradeColdestL3ToL4: ${count} 条目迁移到 L4`);
+    }
+    return count;
   }
 
   /**
@@ -1128,7 +1320,7 @@ export class ContextManager {
       .map((e) => ({ id: e.id, tokens: e.tokenCount, protectedBy: e.protectedBy! }));
 
     const suggestions: string[] = [];
-    if (stats.usePercent >= EVICT_THRESHOLD_1) {
+    if (stats.usePercent >= this.managementPolicy.hardThreshold) {
       suggestions.push(`上下文占用 ${stats.usePercent}%，已达高层级管理；若仍超限请主动 forget 非必要文件`);
     }
     for (const e of active) {
@@ -1538,10 +1730,10 @@ export class ContextManager {
     if (idx !== -1) {
       const e = this.entries[idx]!;
       const tr = opts?.taskRelevance ?? (
-        source === "user" && target === "L1_active" ? 0 :
-        source === "ai" && target === "L1_active" ? 0.1 :
-        target === "L2_capsule" ? 0.6 :
-        target === "L3_cold" ? 1.0 :
+        source === "user" && target === "L2_working" ? 0 :
+        source === "ai" && target === "L2_working" ? 0.1 :
+        target === "L3_compressed" ? 0.6 :
+        target === "L4_raw" ? 1.0 :
         e.taskRelevance
       );
       this.entries[idx] = {
@@ -1561,12 +1753,12 @@ export class ContextManager {
   }
 
   /**
-   * pin 条目到 L1_active（便捷方法）。
-   * user pin → taskRelevance 锁定为 0（绝对保护，永不驱逐）
+   * pin 条目到 L2_working（便捷方法）。
+   * user pin → taskRelevance 锁定为 0（绝对保护，永不降级）
    * ai pin → taskRelevance 锁定为 0.1
    */
   async pin(entryId: string, source: PlacementSource, reason: string): Promise<ContextPlacement> {
-    return this.place(entryId, "L1_active", source, reason, {
+    return this.place(entryId, "L2_working", source, reason, {
       taskRelevance: source === "user" ? 0 : 0.1,
     });
   }
@@ -1754,7 +1946,7 @@ export class ContextManager {
     // 驱逐原始条目 + 注入 L0 摘要 observation
     for (const e of matched) {
       if (e.protectedBy) continue; // 受保护条目不动
-      await this.place(e.id, "L2_capsule", "system", "概括为胶囊", {
+      await this.place(e.id, "L3_compressed", "system", "概括为胶囊", {
         capsuleSummary: output.l0Summary,
         capsuleId: output.capsule.id,
       });
@@ -1784,7 +1976,7 @@ export class ContextManager {
     for (const [, records] of this.placementLog) {
       const latest = records[records.length - 1];
       if (latest && (!latest.expiresAt || latest.expiresAt > Date.now())) {
-        if (latest.target === "L1_active") {
+        if (latest.target === "L2_working") {
           if (latest.source === "user") pins.user++;
           else if (latest.source === "ai") pins.ai++;
           else pins.system++;

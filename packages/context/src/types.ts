@@ -55,13 +55,56 @@ export type SourceType = "tool_output" | "file_content" | "log" | "html" | "json
 /** 条目受保护的原因（taskRelevance=0 时出现） */
 export type ProtectionReason = "editingFile" | "failingTest" | "cwd" | "llm";
 
-// ─── LongContextRecall：三层放置模型 ─────────────────────
+// ─── 四层冷热架构：分重要性/活跃度两个维度 ────────────
 
-/** L1/L2/L3 放置目标 */
-export type PlacementLevel = "L1_active" | "L2_capsule" | "L3_cold";
+/**
+ * 四层放置目标（2026-07-20 重构）。
+ *
+ * 语义：
+ *   L1_permanent — 永远不该丢的知识（用户习惯、项目方向、胶囊指针、检索工具描述）
+ *   L2_working   — 当前工作内容（LLM 实际可见的 L1 指针 + 最近 N 轮对话）
+ *   L3_compressed — 压缩后的旧对话（LLM 摘要过的胶囊正文）
+ *   L4_raw       — 原始旧对话（ContentStore 磁盘深存，只在精确召回时访问）
+ *
+ * 流动：
+ *   L2_working → L3_compressed（触发管理时概括归档）
+ *   L3_compressed → L4_raw（胶囊原文 >7 天或超过 30 个后原文深存）
+ *   L1_permanent → L3_compressed（永久知识旧了也会压缩归档，L1 仅留指针）
+ */
+export type PlacementLevel = "L1_permanent" | "L2_working" | "L3_compressed" | "L4_raw";
 
 /** 放置来源：谁做的这个决定 */
 export type PlacementSource = "system" | "ai" | "user";
+
+/**
+ * 管理策略（用户可调，2026-07-20）。
+ *
+ * 阈值语义改为「非活跃内容占比」而非「总窗口占比」。
+ * 非活跃 = 距离当前话题 > topicDistance 轮 或 超过 ageThresholdMs 未更新。
+ */
+export interface ManagementPolicy {
+  /** 非活跃内容占窗口比例超过此值 → 开始标记/分组/预压缩评估 */
+  softThreshold: number; // 默认 0.20
+  /** 非活跃内容超过此值 → 执行概括归档 L2→L3 */
+  hardThreshold: number; // 默认 0.50
+  /** 总 token 超过此值 → 强制将最冷 L3 条目迁移到 L4 */
+  emergencyThreshold: number; // 默认 0.85
+  /** 距离当前话题多少轮才算"非活跃" */
+  topicDistance: number; // 默认 3
+  /** 单条消息超过此 token 直接评估是否该压缩归档 */
+  maxChunkBeforeManage: number; // 默认 4000
+  /** 用户 override 模式 */
+  userOverride: "manual" | "auto";
+}
+
+export const DEFAULT_MANAGEMENT_POLICY: ManagementPolicy = {
+  softThreshold: 0.20,
+  hardThreshold: 0.50,
+  emergencyThreshold: 0.85,
+  topicDistance: 3,
+  maxChunkBeforeManage: 4000,
+  userOverride: "auto",
+};
 
 /**
  * 上下文放置记录。
@@ -79,9 +122,9 @@ export interface ContextPlacement {
   reason: string;
   /** 放置时间 */
   placedAt: number;
-  /** L2_capsule 专属：胶囊摘要文本（~100 tokens） */
+  /** L3_compressed 专属：胶囊摘要文本（~100 tokens） */
   capsuleSummary?: string;
-  /** L2_capsule 专属：关联的胶囊 id */
+  /** L3_compressed 专属：关联的胶囊 id */
   capsuleId?: string;
   /** 过期时间（ms timestamp），过期后自动降级回系统默认 */
   expiresAt?: number;
@@ -130,6 +173,7 @@ export interface ContextEntry {
   compressed: boolean;
   compressedContent?: string;
   compressedTokenCount?: number;
+  compressedAt?: number;
 
   // 驱逐到外部存储（保留审计，物理移出窗口但完整原文在 ContentStore）
   evicted: boolean;
@@ -179,11 +223,21 @@ export const EMPTY_TASK_CONTEXT: TaskContext = {
 
 export interface AutoManageReport {
   usePercent: number;
-  triggerLevel: 0 | 1 | 2 | -1; // -1 = 未触发（usePercent 未达层0）
+  /** 非活跃内容占窗口的比例 */
+  inactivePercent: number;
+  triggerLevel: 0 | 1 | 2 | -1; // -1 = 未触发（非活跃占比未达 soft）
+  /** 降级条目数（L2→L3 + L3→L4 + 持续清理） */
+  downgradedCount: number;
+  /** 降级节省的 token 数 */
+  downgradedTokens: number;
+  /** @deprecated 用 downgradedCount 替代 */
   evictedCount: number;
+  /** @deprecated 用 downgradedTokens 替代 */
   evictedTokens: number;
   compressedCount: number;
   truncatedCount: number;
+  /** L3→L4 深存条目数 */
+  l4MigratedCount: number;
   focusedFiles: string[];
   recalledMemories: number;
   /** 守护轨质询结果（autoManage 每步自动运行 runInquiry） */
@@ -228,16 +282,15 @@ export interface ContextStats {
   byType: Record<string, number>;
 }
 
-// ─── 阈值 / 比例常量（集中便于基准调参） ──────────────────
+// ─── 四层冷热管理常量 ──────────────────────────────────
 
-/** 三层阈值：窗口使用率 */
-export const EVICT_THRESHOLD_0 = 70; // 层0：轻量驱逐
-export const EVICT_THRESHOLD_1 = 85; // 层1：驱逐 + 压缩 + 截断
-export const EVICT_THRESHOLD_2 = 90; // 层2：强制 forget 非聚焦文件
-
-/** 驱逐比例（占总条数） */
-export const EVICT_RATIO_0 = 0.15;
-export const EVICT_RATIO_1 = 0.25;
+/**
+ * 管理触发规则（非活跃 = 距当前话题 ≥ topicDistance 轮 或 超过 ageThresholdMs）。
+ *   - 非活跃内容 > softThreshold → 开始标记、分组、预压缩评估
+ *   - 非活跃内容 > hardThreshold → 执行概括归档 L2→L3
+ *   - 总 token > emergencyThreshold → 强制迁移最冷 L3 条目到 L4
+ * 阈值在 ManagementPolicy 中定义，此处为常量引用。
+ */
 
 /** 长条目截断阈值与切片 */
 export const TRUNCATE_THRESHOLD = 2000; // token

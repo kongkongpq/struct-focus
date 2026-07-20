@@ -1,4 +1,4 @@
-// @struct/context — LongContextRecall 新功能单测 (2026-07-19)
+﻿// @struct/context — LongContextRecall 新功能单测 (2026-07-19)
 // 覆盖：放置系统 / 召回管线 / 概括管线 / 容量管理 / ContentStore 搜索 / toMessages L1/L2/L3 渲染
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -49,12 +49,12 @@ describe("Placement System", () => {
   it("place → getPlacement 往返", async () => {
     cm.appendUser("test content");
     const entry = cm.getEntries()[0]!;
-    const p = await cm.place(entry.id, "L2_capsule", "system", "测试放置");
-    expect(p.target).toBe("L2_capsule");
+    const p = await cm.place(entry.id, "L3_compressed", "system", "测试放置");
+    expect(p.target).toBe("L3_compressed");
     expect(p.source).toBe("system");
     const retrieved = cm.getPlacement(entry.id);
     expect(retrieved).toBeTruthy();
-    expect(retrieved!.target).toBe("L2_capsule");
+    expect(retrieved!.target).toBe("L3_compressed");
   });
 
   it("pin (user) → 绝对保护", async () => {
@@ -80,7 +80,7 @@ describe("Placement System", () => {
     const entry = cm.getEntries()[0]!;
     await cm.pin(entry.id, "user", "用户保护");
     await expect(
-      cm.place(entry.id, "L3_cold", "ai", "试图覆盖")
+      cm.place(entry.id, "L4_raw", "ai", "试图覆盖")
     ).rejects.toThrow(ContextPlacementConflictError);
   });
 
@@ -88,8 +88,8 @@ describe("Placement System", () => {
     cm.appendUser("data");
     const entry = cm.getEntries()[0]!;
     await cm.pin(entry.id, "ai", "AI attention");
-    const p2 = await cm.place(entry.id, "L3_cold", "user", "强制冷存");
-    expect(p2.target).toBe("L3_cold");
+    const p2 = await cm.place(entry.id, "L4_raw", "user", "强制冷存");
+    expect(p2.target).toBe("L4_raw");
   });
 
   it("unpin 清除 user pin", async () => {
@@ -114,7 +114,7 @@ describe("Placement System", () => {
   it("expired placement 退回 null", async () => {
     cm.appendUser("expires soon");
     const entry = cm.getEntries()[0]!;
-    await cm.place(entry.id, "L2_capsule", "ai", "for 1ms", { expiresAt: Date.now() + 1 });
+    await cm.place(entry.id, "L3_compressed", "ai", "for 1ms", { expiresAt: Date.now() + 1 });
     await new Promise((r) => setTimeout(r, 10));
     expect(cm.getPlacement(entry.id)).toBeNull();
   });
@@ -122,12 +122,12 @@ describe("Placement System", () => {
   it("placement 最多追加记录不覆盖", async () => {
     cm.appendUser("multi-place");
     const entry = cm.getEntries()[0]!;
-    await cm.place(entry.id, "L1_active", "system", "first");
-    await cm.place(entry.id, "L2_capsule", "ai", "second");
-    await cm.place(entry.id, "L3_cold", "ai", "third");
+    await cm.place(entry.id, "L2_working", "system", "first");
+    await cm.place(entry.id, "L3_compressed", "ai", "second");
+    await cm.place(entry.id, "L4_raw", "ai", "third");
     // 有效状态 = 最近一条
     const p = cm.getPlacement(entry.id);
-    expect(p!.target).toBe("L3_cold");
+    expect(p!.target).toBe("L4_raw");
     expect(p!.source).toBe("ai");
   });
 });
@@ -377,17 +377,17 @@ describe("Placement-aware toMessages", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  it("L1_active 条目完整渲染", () => {
+  it("L2_working 条目完整渲染", () => {
     cm.appendUser("important message");
     const msgs = cm.toMessages("system prompt");
     const userMessages = msgs.filter((m: { role: string; content: string | null }) => m.role === "user");
     expect(userMessages.some((m: { content: string | null }) => m.content && m.content.includes("important message"))).toBe(true);
   });
 
-  it("L2_capsule 条目渲染为胶囊摘要", async () => {
+  it("L3_compressed 条目渲染为胶囊摘要", async () => {
     cm.appendUser("this will be condensed");
     const entry = cm.getEntries()[0]!;
-    await cm.place(entry.id, "L2_capsule", "ai", "summarize", { capsuleSummary: "📦 测试胶囊摘要" });
+    await cm.place(entry.id, "L3_compressed", "ai", "summarize", { capsuleSummary: "📦 测试胶囊摘要" });
     const msgs = cm.toMessages("system prompt");
     const capsuleMessages = msgs.filter((m: { content: string | null }) =>
       m.content && m.content.includes("胶囊"));
@@ -396,10 +396,10 @@ describe("Placement-aware toMessages", () => {
     expect(capsuleMessages[0]!.content).toContain("expand:context");
   });
 
-  it("L3_cold 条目不渲染", async () => {
+  it("L4_raw 条目不渲染", async () => {
     cm.appendUser("cold storage data");
     const entry = cm.getEntries()[0]!;
-    await cm.place(entry.id, "L3_cold", "user", "冷存");
+    await cm.place(entry.id, "L4_raw", "user", "冷存");
     const msgs = cm.toMessages("system prompt");
     const coldMessages = msgs.filter((m: { content: string | null }) =>
       m.content && m.content.includes("cold storage"));
@@ -539,7 +539,7 @@ describe("ContextManager.getStore()", () => {
 // ─── 测试 10: toMessages with placementMap 参数 ────────
 
 describe("buildContext placementMap", () => {
-  it("placementMap L3_cold 条目不渲染", () => {
+  it("placementMap L4_raw 条目不渲染", () => {
     const entries: ContextEntry[] = [
       {
         id: "e1", type: "user", content: "visible", tokenCount: 10, timestamp: Date.now(),
@@ -551,7 +551,7 @@ describe("buildContext placementMap", () => {
       },
     ];
     const placementMap = new Map<string, ContextPlacement>();
-    placementMap.set("e2", { entryId: "e2", target: "L3_cold", source: "user", reason: "cold", placedAt: Date.now() });
+    placementMap.set("e2", { entryId: "e2", target: "L4_raw", source: "user", reason: "cold", placedAt: Date.now() });
 
     const msgs = buildContext({
       systemPrompt: "test",
@@ -566,7 +566,7 @@ describe("buildContext placementMap", () => {
     expect(userMsgs.some((m: { content: string | null }) => m.content && m.content.includes("hidden"))).toBe(false);
   });
 
-  it("placementMap L2_capsule 渲染为摘要", () => {
+  it("placementMap L3_compressed 渲染为摘要", () => {
     const entries: ContextEntry[] = [
       {
         id: "e1", type: "user", content: "big content here", tokenCount: 100, timestamp: Date.now(),
@@ -575,7 +575,7 @@ describe("buildContext placementMap", () => {
     ];
     const placementMap = new Map<string, ContextPlacement>();
     placementMap.set("e1", {
-      entryId: "e1", target: "L2_capsule", source: "ai", reason: "summarized",
+      entryId: "e1", target: "L3_compressed", source: "ai", reason: "summarized",
       placedAt: Date.now(), capsuleSummary: "📦 摘要: 包含重要决策",
     });
 
