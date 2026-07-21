@@ -102,6 +102,11 @@ export class CapsuleStore {
     }
   }
 
+  /** 物理删除一个胶囊文件（超限清理用） */
+  async delete(id: string): Promise<void> {
+    await fs.unlink(this.capsulePath(id)).catch(() => {});
+  }
+
   /** 按文件路径查找关联胶囊 */
   async findByFile(filePath: string): Promise<Capsule[]> {
     await this.ensureReady();

@@ -49,6 +49,8 @@ export interface LongContextEngineOptions {
   minEntriesForSummarize?: number;
   /** 自动概括是否启用（默认 true） */
   autoSummarize?: boolean;
+  /** 胶囊数量上限（默认 50，0 表示不限制）。超限时按 createdAt 踢最旧胶囊 */
+  capsuleMaxCount?: number;
   /** 日志函数 */
   logger?: (msg: string) => void;
 }
@@ -91,6 +93,8 @@ export class LongContextEngine {
       maxWindow: opts.maxWindow ?? 200_000,
       minEntriesForSummarize: opts.minEntriesForSummarize ?? 10,
       autoSummarize: opts.autoSummarize ?? true,
+      capsuleMaxCount: opts.capsuleMaxCount ??
+        parseInt(process.env.STRUCT_CAPSULE_MAX_COUNT ?? "50", 10),
       logger: opts.logger ?? (() => {}),
     };
     this.llmCall = opts.llmCall ?? null;
@@ -207,9 +211,33 @@ export class LongContextEngine {
     if (result) {
       this.totalSummarized += tokenCount;
       this.lastSummarizeAt = Date.now();
+      await this.enforceCapsuleLimit();
     }
 
     return result;
+  }
+
+  /**
+   * 胶囊数量上限保护：超限时按 createdAt 踢最旧胶囊（同时物理删除 JSON 文件）。
+   * 防止 listCapsules / summaryTextL1 在 1000+ 胶囊时遍历全量、渲染慢且占大量 token。
+   * 在 summarize() 生成新胶囊后调用。
+   */
+  private async enforceCapsuleLimit(): Promise<void> {
+    const max = this.options.capsuleMaxCount ?? 50;
+    if (max <= 0) return; // 0 = 不限制
+
+    const all = await this.cm.listCapsules();
+    if (all.length <= max) return;
+
+    // 按 createdAt ASC 排序，踢超出的部分（最旧在前）
+    const sorted = all.sort((a, b) => a.createdAt - b.createdAt);
+    const toRemove = sorted.slice(0, sorted.length - max);
+
+    const capsuleStore = this.cm.getCapsuleStore();
+    for (const c of toRemove) {
+      await capsuleStore.delete(c.id);
+    }
+    this.log(`enforceCapsuleLimit: 移除最旧 ${toRemove.length} 个胶囊（保留最近 ${max} 个，现 ${sorted.length - toRemove.length} 个）`);
   }
 
   /**
