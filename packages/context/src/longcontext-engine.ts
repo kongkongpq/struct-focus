@@ -51,6 +51,8 @@ export interface LongContextEngineOptions {
   autoSummarize?: boolean;
   /** 胶囊数量上限（默认 50，0 表示不限制）。超限时按 createdAt 踢最旧胶囊 */
   capsuleMaxCount?: number;
+  /** 磁盘存储上限（MB），0 表示不限制；默认 512，可用 STRUCT_STORE_MAX_MB 覆盖 */
+  storeMaxMB?: number;
   /** 日志函数 */
   logger?: (msg: string) => void;
 }
@@ -70,6 +72,13 @@ export interface EngineStats {
   activeEntries: number;
   storedEntries: number;
   lastSummarizeAt: number | null;
+  /** ContentStore 磁盘占用统计（LRU 上限相关） */
+  storeStats: {
+    usedBytes: number;
+    maxBytes: number;
+    entryCount: number;
+    atCapacity: boolean;
+  };
 }
 
 // ─── 引擎 ───────────────────────────────────────────────
@@ -95,6 +104,7 @@ export class LongContextEngine {
       autoSummarize: opts.autoSummarize ?? true,
       capsuleMaxCount: opts.capsuleMaxCount ??
         parseInt(process.env.STRUCT_CAPSULE_MAX_COUNT ?? "50", 10),
+      storeMaxMB: opts.storeMaxMB,
       logger: opts.logger ?? (() => {}),
     };
     this.llmCall = opts.llmCall ?? null;
@@ -102,6 +112,7 @@ export class LongContextEngine {
     this.cm = new ContextManager({
       maxWindow: this.options.maxWindow,
       storeRoot: this.options.storeRoot,
+      storeMaxMB: this.options.storeMaxMB,
       capsuleRoot: this.options.capsuleRoot,
     });
 
@@ -428,6 +439,7 @@ export class LongContextEngine {
   async getStats(): Promise<EngineStats> {
     const cmStats = this.cm.getStats();
     const capsules = await this.cm.listCapsules();
+    const storeStats = await this.cm.getStore().getStorageStats();
     return {
       totalFed: this.totalFed,
       totalSummarized: this.totalSummarized,
@@ -435,6 +447,7 @@ export class LongContextEngine {
       activeEntries: cmStats.activeEntries,
       storedEntries: cmStats.evictedEntries,
       lastSummarizeAt: this.lastSummarizeAt,
+      storeStats,
     };
   }
 

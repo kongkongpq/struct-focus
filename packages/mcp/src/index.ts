@@ -200,6 +200,14 @@ async function callTool(
         activeEntries: stats.activeEntries,
         storedEntries: stats.storedEntries,
         lastSummarizeAt: stats.lastSummarizeAt,
+        storeStats: {
+          usedMB: Math.round((stats.storeStats.usedBytes / 1024 / 1024) * 100) / 100,
+          maxMB: stats.storeStats.maxBytes > 0
+            ? Math.round((stats.storeStats.maxBytes / 1024 / 1024) * 100) / 100
+            : 0,
+          entryCount: stats.storeStats.entryCount,
+          atCapacity: stats.storeStats.atCapacity,
+        },
         policy: {
           conservative: policy.conservative,
           effectiveEmergencyThreshold: effectiveEmergencyThreshold(policy),

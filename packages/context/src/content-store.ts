@@ -177,9 +177,23 @@ export class ContentStore {
   private indexDirty = false;
   private totalIndexedDocs = 0;
   private totalIndexedTokens = 0;
+  /** 磁盘上限（字节），0 表示不限制 */
+  private readonly storeMaxBytes: number;
+  /** 清理节流间隔（毫秒），避免每次写入都全量扫描磁盘 */
+  private readonly cleanupThrottleMs: number;
+  /** 上次清理时间戳 */
+  private lastCleanupAt = 0;
 
-  constructor(root: string) {
+  constructor(
+    root: string,
+    opts?: { maxStorageMB?: number; cleanupThrottleMs?: number },
+  ) {
     this.root = root;
+    const mb = opts?.maxStorageMB ??
+      parseInt(process.env.STRUCT_STORE_MAX_MB ?? "512", 10);
+    // NaN 保护：解析失败退回 512
+    this.storeMaxBytes = (Number.isFinite(mb) ? mb : 512) * 1024 * 1024;
+    this.cleanupThrottleMs = opts?.cleanupThrottleMs ?? 60_000;
   }
 
   /** 确保存储目录存在 (惰性初始化) */
@@ -210,6 +224,96 @@ export class ContentStore {
     await fs.writeFile(p, JSON.stringify(entry, null, 2), "utf-8");
     // 更新索引
     this.indexEntry(entry);
+    // 异步触发磁盘 LRU 清理（不阻塞 save）
+    void this.maybeCleanup();
+  }
+
+  /** 估算 entries 目录总占用（字节） */
+  private async dirSize(): Promise<number> {
+    let total = 0;
+    const entriesDir = path.join(this.root, "entries");
+    try {
+      const shards = await fs.readdir(entriesDir);
+      for (const shard of shards) {
+        const shardDir = path.join(entriesDir, shard);
+        const st = await fs.stat(shardDir);
+        if (!st.isDirectory()) continue;
+        const files = await fs.readdir(shardDir);
+        for (const f of files) {
+          if (!f.endsWith(".json")) continue;
+          try {
+            const s = await fs.stat(path.join(shardDir, f));
+            total += s.size;
+          } catch {
+            // 跳过无法 stat 的文件
+          }
+        }
+      }
+    } catch {
+      // 目录尚未创建
+    }
+    return total;
+  }
+
+  /**
+   * 磁盘 LRU 清理：当 entries 目录总大小超过上限（storeMaxBytes>0）时，
+   * 按保存时间（内存索引中的 savedAt，避免文件 mtime 精度问题）从旧到新删除，
+   * 直到回到上限的 90% 以下。带节流（cleanupThrottleMs），避免每次写入都全量扫描磁盘。
+   */
+  private async maybeCleanup(force = false): Promise<number> {
+    if (this.storeMaxBytes <= 0) return 0;
+    const now = Date.now();
+    if (!force && now - this.lastCleanupAt < this.cleanupThrottleMs) return 0;
+    this.lastCleanupAt = now;
+
+    const used = await this.dirSize();
+    if (used <= this.storeMaxBytes) return 0;
+
+    const target = Math.floor(this.storeMaxBytes * 0.9);
+    // 按保存时间从旧到新排序；从内存索引取 savedAt，避免依赖文件 mtime 精度
+    const ordered = [...this.index.entries()]
+      .map(([id, ie]) => ({ id, savedAt: ie.savedAt }))
+      .sort((a, b) => a.savedAt - b.savedAt);
+
+    let freed = 0;
+    for (const item of ordered) {
+      if (used - freed <= target) break;
+      const fp = this.entryPath(item.id);
+      try {
+        const s = await fs.stat(fp);
+        await fs.unlink(fp);
+        freed += s.size;
+      } catch {
+        // 文件不存在：忽略
+      }
+      // 无论删除是否成功，均从索引移除，避免悬挂引用
+      this.index.delete(item.id);
+    }
+    return freed;
+  }
+
+  /**
+   * 手动触发磁盘 LRU 清理（绕过节流）。返回释放的字节数。
+   * 供测试与运维使用。
+   */
+  async enforceStorageLimit(): Promise<number> {
+    return this.maybeCleanup(true);
+  }
+
+  /** 磁盘占用统计（字节 / 上限 / 条目数 / 是否触顶） */
+  async getStorageStats(): Promise<{
+    usedBytes: number;
+    maxBytes: number;
+    entryCount: number;
+    atCapacity: boolean;
+  }> {
+    const used = await this.dirSize();
+    return {
+      usedBytes: used,
+      maxBytes: this.storeMaxBytes,
+      entryCount: this.index.size,
+      atCapacity: this.storeMaxBytes > 0 && used >= this.storeMaxBytes,
+    };
   }
 
   async load(id: string): Promise<StoredContent | null> {

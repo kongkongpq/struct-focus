@@ -94,6 +94,8 @@ export interface ContextManagerOptions {
   memory?: MemoryBackend;
   /** ContentStore 存储根路径 */
   storeRoot?: string;
+  /** 磁盘上限（MB），0 表示不限制；默认 512，可用 STRUCT_STORE_MAX_MB 覆盖 */
+  storeMaxMB?: number;
   /** CapsuleStore 存储根路径 */
   capsuleRoot?: string;
 }
@@ -297,6 +299,7 @@ export class ContextManager {
     this.memory = opts.memory ?? new InMemoryBackend();
     this.store = new ContentStore(
       opts.storeRoot ?? path.join(process.cwd(), ".structfocus", "content-store"),
+      { maxStorageMB: opts.storeMaxMB },
     );
     this.capsules = new CapsuleStore(
       opts.capsuleRoot ?? path.join(process.cwd(), ".structfocus", "capsules"),
