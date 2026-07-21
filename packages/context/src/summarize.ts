@@ -6,7 +6,7 @@
 //   L2: 完整 JSON（ContentStore + CapsuleStore）
 //
 // chunkBySemantic：按语义边界分块（不固定长度）
-//   规则：最大 4000 chars、在 \n\n 处切分、禁止句子中间切开、
+//   规则：最大 2000 chars、在 \n\n 处切分、禁止句子中间切开、
 //         同说话者连续消息保持在一起、时间跳跃>1天→强制新块
 
 import { CapsuleStore, type Capsule } from "./capsule.js";
@@ -39,7 +39,7 @@ export interface SummarizeOutput {
  * 不固定长度，而是按自然边界切分。
  *
  * 规则：
- *   1. maxChars 默认 4000
+ *   1. maxChars 默认 2000
  *   2. 在换段符 (\n\n) 处切分
  *   3. 禁止在句子中间切开（退回到上一个句子边界）
  *   4. 同一说话者 (source 相同) 的连续消息保持在同块

@@ -60,7 +60,7 @@ function scoreRecall(text, keywords) {
   return { hits, total: keywords.length, rate: hits / keywords.length };
 }
 
-// ─── 直接测试胶囊概括质量（不经过 ContentStore FTS5） ──
+// ─── 直接测试胶囊概括质量（不经过 ContentStore 全文检索） ──
 async function testCapsuleQuality(label, engine, useLLM) {
   console.log(`\n${"═".repeat(60)}`);
   console.log(`  ${label}`);
@@ -113,7 +113,7 @@ async function main() {
 
   console.log("══════════════════════════════════════════════════");
   console.log("  LLM vs Deterministic 概括质量对比 v2");
-  console.log("  仅测胶囊原文（不搜 ContentStore FTS5）");
+  console.log("  仅测胶囊原文（不搜 ContentStore 全文检索）");
   console.log("══════════════════════════════════════════════════");
 
   // ── Run A: LLM 概括 ──

@@ -68,7 +68,7 @@ STRUCT_LLM_BASE_URL=http://localhost:11434/v1
 STRUCT_LLM_MODEL=qwen2:7b
 ```
 
-接入后，Agent 可调用 6 个上下文工具：
+接入后，Agent 可调用 8 个上下文工具：
 
 | 工具 | 作用 |
 |:---|:---|
@@ -124,7 +124,7 @@ const { injectText } = await engine.recall(query);
 ```bash
 pnpm install
 pnpm build      # tsc -b（context → dist）
-pnpm test       # vitest run（context + mcp 共 151 用例）
+pnpm test       # vitest run（context + mcp 共 157 用例）
 pnpm lint       # eslint packages/context/src packages/mcp/src
 ```
 

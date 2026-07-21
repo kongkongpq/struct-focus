@@ -19,7 +19,8 @@
     "build": "tsc -b",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run --project context",
-    "clean": "rimraf dist *.tsbuildinfo"
+    "clean": "rimraf dist *.tsbuildinfo",
+    "prepublishOnly": "tsc -b"
   },
   "dependencies": {},
   "license": "Apache-2.0"

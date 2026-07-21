@@ -4,7 +4,7 @@
 > 一句话：**长对话里不丢消息，只是不一直放在眼前** —— 概括 → 胶囊 → 指针 → 召回。
 
 > 新品类定位：**MCP 上下文管理（Context-as-a-Tool）**。StructFocus 不绑定任何 Agent 框架，
-> 而是作为一个 MCP Server 暴露 6 个上下文工具，被 Claude Code / Cursor / Cline / 任意支持 MCP 的客户端直接调用。
+> 而是作为一个 MCP Server 暴露 8 个上下文工具，被 Claude Code / Cursor / Cline / 任意支持 MCP 的客户端直接调用。
 
 ---
 

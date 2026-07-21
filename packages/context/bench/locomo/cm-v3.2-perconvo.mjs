@@ -126,7 +126,7 @@ async function main() {
     for (const name of [...new Set(names)]) {
       try {
         const results = await store.search(name, {
-          mode: "fts5",
+          mode: "bm25",
           topK: RECALL_LIMIT,
           sourcePattern: convoTag,
         });

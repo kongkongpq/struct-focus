@@ -1,5 +1,5 @@
 // @structfocus/context — ContentStore：外部存储，保存被截断/驱逐的原始内容
-// 零外部依赖。磁盘文件按 entry id 哈希分片，支持 FTS5 全文搜索、回想、展开、审计。
+// 零外部依赖。磁盘文件按 entry id 哈希分片，支持全文检索（内存 BM25）、回想、展开、审计。
 // ContextManager 在 truncate/ evict/ forget 时调用 save()，
 // 在 expand/ recall 时调用 load() / search()。
 //
@@ -29,7 +29,7 @@ export interface SearchResult {
 }
 
 export interface SearchOptions {
-  mode: "fts5" | "hybrid";
+  mode: "bm25" | "hybrid";
   topK: number;
   minScore?: number;
   savedAfter?: number;
@@ -38,7 +38,7 @@ export interface SearchOptions {
   capsuleId?: string;
 }
 
-// ─── 简易内存 FTS5 全文索引 ─────────────────────────────
+// ─── 简易内存 BM25 全文索引 ─────────────────────────────
 
 interface IndexEntry {
   entryId: string;
@@ -161,7 +161,7 @@ function generateSnippet(content: string, queryTokens: string[]): string {
 
 /**
  * 磁盘内容存储。
- * 保存被截断/驱逐条目的完整原文，支持 FTS5 全文搜索召回。
+ * 保存被截断/驱逐条目的完整原文，支持全文检索（BM25）召回。
  * 按 entry id 哈希分片 (shard 256) 写入独立文件，避免单文件膨胀。
  *
  * 设计约束：
@@ -172,7 +172,7 @@ function generateSnippet(content: string, queryTokens: string[]): string {
 export class ContentStore {
   private readonly root: string;
   private ready = false;
-  /** FTS5 内存索引 */
+  /** BM25 内存索引 */
   private index = new Map<string, IndexEntry>();
   private indexDirty = false;
   private totalIndexedDocs = 0;
@@ -349,7 +349,7 @@ export class ContentStore {
     return results;
   }
 
-  // ─── FTS5 全文搜索 ───────────────────────────────────
+  // ─── BM25 全文搜索 ───────────────────────────────────
 
   /** 将单条 StoredContent 加入内存索引 */
   private indexEntry(entry: StoredContent): void {

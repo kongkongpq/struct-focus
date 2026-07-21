@@ -1798,7 +1798,7 @@ export class ContextManager {
    * 从 ContentStore 按查询召回相关条目（无副作用）。
    *
    * 核心流程：
-   *   1. store.search(query, { mode: "fts5", topK: limit })
+   *   1. store.search(query, { mode: "bm25", topK: limit })
    *   2. 按 score 降序排列
    *   3. 去重（已活跃在 this.entries 中的跳过）
    *   4. 返回结果给调用者
@@ -1809,7 +1809,7 @@ export class ContextManager {
    */
   async recallRelevant(query: string, limit = 5): Promise<RecallResult> {
     const results = await this.store.search(query, {
-      mode: "fts5",
+      mode: "bm25",
       topK: limit * 2, // 多取一些，去重后取 topK
     });
 

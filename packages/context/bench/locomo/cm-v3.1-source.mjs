@@ -157,7 +157,7 @@ async function main() {
     let totalRecalled = 0;
     for (const q of queries) {
       try {
-        const results = await store.search(q, { mode: "fts5", topK: RECALL_LIMIT, sourcePattern: convoTag });
+        const results = await store.search(q, { mode: "bm25", topK: RECALL_LIMIT, sourcePattern: convoTag });
         for (const r of results) {
           cm.appendObservation(
             "[recall] " + (r.entry.source || "") + "\n" + r.entry.originalContent.slice(0, 3000),

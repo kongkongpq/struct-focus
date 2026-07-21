@@ -368,7 +368,7 @@ export class LongContextEngine {
    *
    * 两步：
    *   1. CapsuleStore 搜索（按文件/主题匹配胶囊）
-   *   2. ContentStore FTS5 搜索（按内容匹配被驱逐的原文）
+   *   2. ContentStore BM25 搜索（按内容匹配被驱逐的原文）
    *
    * @param query 自然语言查询
    * @param opts.topK 最多返回条数（默认 5）
@@ -380,9 +380,9 @@ export class LongContextEngine {
   ): Promise<RecallResult> {
     const topK = opts?.topK ?? 5;
 
-    // 1. ContentStore FTS5 搜索
+    // 1. ContentStore BM25 搜索
     const searchResults = await this.cm.getStore().search(query, {
-      mode: "fts5",
+      mode: "bm25",
       topK: topK * 2,
     });
 

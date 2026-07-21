@@ -224,9 +224,6 @@ async function callTool(
       if (!query) return textResult("error: query 不能为空");
       const topK = typeof args.topK === "number" ? args.topK : undefined;
       const result = await engine.recall(query, topK ? { topK } : undefined);
-      if (result.injectText.includes("未找到")) {
-        return textResult(result.injectText);
-      }
       return textResult(result.injectText);
     }
     case "context_status": {

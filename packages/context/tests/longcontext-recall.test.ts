@@ -160,33 +160,33 @@ describe("ContentStore Search", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  it("FTS5 search: Caroline → 返回相关条目", async () => {
-    const results = await store.search("Caroline adoption", { mode: "fts5", topK: 5 });
+  it("BM25 search: Caroline → 返回相关条目", async () => {
+    const results = await store.search("Caroline adoption", { mode: "bm25", topK: 5 });
     expect(results.length).toBeGreaterThanOrEqual(1);
     // e3 应该最高（包含 Caroline + Evan + adoption）
     const top = results[0]!;
     expect(top.entry.originalContent).toContain("Caroline");
   });
 
-  it("FTS5 search: PostgreSQL → 匹配英文词（中文需分词器，见已知局限）", async () => {
-    const results = await store.search("PostgreSQL", { mode: "fts5", topK: 5 });
+  it("BM25 search: PostgreSQL → 匹配英文词（中文需分词器，见已知局限）", async () => {
+    const results = await store.search("PostgreSQL", { mode: "bm25", topK: 5 });
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results.some((r) => r.entry.originalContent.includes("PostgreSQL"))).toBe(true);
   });
 
-  it("FTS5 search: 无匹配返回空", async () => {
-    const results = await store.search("xyzzy_nonexistent_term", { mode: "fts5", topK: 5 });
+  it("BM25 search: 无匹配返回空", async () => {
+    const results = await store.search("xyzzy_nonexistent_term", { mode: "bm25", topK: 5 });
     expect(results).toHaveLength(0);
   });
 
   it("search with minScore", async () => {
-    const results = await store.search("Caroline", { mode: "fts5", topK: 5, minScore: 0.3 });
+    const results = await store.search("Caroline", { mode: "bm25", topK: 5, minScore: 0.3 });
     expect(results.length).toBeGreaterThanOrEqual(1);
   });
 
   it("search with savedAfter filter", async () => {
     const now = Date.now();
-    const results = await store.search("PostgreSQL", { mode: "fts5", topK: 5, savedAfter: now - 50000 });
+    const results = await store.search("PostgreSQL", { mode: "bm25", topK: 5, savedAfter: now - 50000 });
     // e4 is 100s ago, e2 is recent
     const ids = results.map((r) => r.entry.entryId);
     expect(ids).toContain("e2");
@@ -194,13 +194,13 @@ describe("ContentStore Search", () => {
   });
 
   it("search with sourcePattern", async () => {
-    const results = await store.search("Caroline", { mode: "fts5", topK: 5, sourcePattern: "chat_1" });
+    const results = await store.search("Caroline", { mode: "bm25", topK: 5, sourcePattern: "chat_1" });
     const sources = results.map((r) => r.entry.source);
     expect(sources.every((s) => s === "chat_1")).toBe(true);
   });
 
   it("searchMulti 合并去重", async () => {
-    const results = await store.searchMulti(["Caroline", "PostgreSQL"], { mode: "fts5", topK: 5 });
+    const results = await store.searchMulti(["Caroline", "PostgreSQL"], { mode: "bm25", topK: 5 });
     expect(results.length).toBeGreaterThanOrEqual(2);
     // 不应有重复
     const ids = results.map((r) => r.entry.entryId);
