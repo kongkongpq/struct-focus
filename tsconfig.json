@@ -1,7 +1,6 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/context" },
-    { "path": "packages/app" }
+    { "path": "packages/context" }
   ]
 }

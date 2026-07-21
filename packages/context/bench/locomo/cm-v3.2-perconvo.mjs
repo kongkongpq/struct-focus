@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { tmpdir } from "os";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const ctxUrl = pathToFileURL("E:/Develop/SrcuctAgent/packages/context/dist/index.js").href;
+const ctxUrl = new URL("../../dist/index.js", import.meta.url).href;
 const { ContextManager } = await import(ctxUrl);
 
 const API_KEY = process.env.LOCOMO_API_KEY ?? "";

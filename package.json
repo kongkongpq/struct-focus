@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc -b && pnpm --filter @structfocus/mcp typecheck",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -24,7 +24,7 @@
     "vitest": "^2.1.8"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.6.0",
     "pnpm": ">=9.0.0"
   }
 }

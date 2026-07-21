@@ -89,6 +89,11 @@ const { injectText } = await engine.recall(query);
 
 架构设计详见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 
+## 环境要求
+
+- **Node >= 22.6.0**（MCP Server 用 `node --experimental-strip-types` 直跑 TypeScript，22.6 起支持；低版本无法启动 `@structfocus/mcp`）
+- pnpm >= 9（开发用）
+
 ## 构建与验证
 
 ```bash
