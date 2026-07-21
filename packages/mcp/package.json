@@ -8,10 +8,11 @@
   },
   "description": "StructFocus 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）",
   "bin": {
-    "struct-context-mcp": "./src/index.ts"
+    "struct-context-mcp": "./bin/struct-context-mcp.js"
   },
   "files": [
-    "src"
+    "src",
+    "bin"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
