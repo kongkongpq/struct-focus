@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ContextManager, type TaskContext } from "@structfocus/context";
+import { ContextManager, type TaskContext, effectiveEmergencyThreshold, DEFAULT_MANAGEMENT_POLICY } from "@structfocus/context";
 
 function fillNoise(m: ContextManager, n: number, size = 200): void {
   for (let i = 0; i < n; i++) {
@@ -132,5 +132,41 @@ describe("记忆 recall / remember", () => {
     });
     const report = await m.autoManage();
     expect(report.recalledMemories).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("保守模式 (conservative) — emergencyThreshold", () => {
+  it("effectiveEmergencyThreshold: 普通=0.85，保守=0.97，保守+更高阈值取大值", () => {
+    expect(effectiveEmergencyThreshold({ ...DEFAULT_MANAGEMENT_POLICY, conservative: false })).toBe(0.85);
+    expect(effectiveEmergencyThreshold({ ...DEFAULT_MANAGEMENT_POLICY, conservative: true })).toBe(0.97);
+    expect(
+      effectiveEmergencyThreshold({ ...DEFAULT_MANAGEMENT_POLICY, emergencyThreshold: 0.99, conservative: true }),
+    ).toBe(0.99);
+  });
+
+  it("相同负载下保守模式抑制 L3→L4 落盘，仅接近满窗口才触发", () => {
+    function build(conservative: boolean, targetLoad: number) {
+      const m = new ContextManager({ maxWindow: 10_000 });
+      // topicDistance:0 让全部内容视为非活跃，便于触发 L2→L3 降层，制造可被落盘的 L3
+      m.setManagementPolicy({ softThreshold: 0.1, hardThreshold: 0.2, topicDistance: 0, emergencyThreshold: 0.85, conservative });
+      const chunk = "x".repeat(105); // ~30 tokens
+      let guard = 0;
+      while (m.getStats().usePercent < targetLoad && guard++ < 5000) {
+        m.appendToolResult(chunk, { source: "c", sourceType: "log" });
+      }
+      // 单次 manage 内会先 L2→L3 降层，再评估 L3→L4 紧急落盘
+      return m.manage();
+    }
+
+    // 负载落在 85%~97% 之间：普通模式(85%)应触发紧急落盘(triggerLevel=2)，保守模式(97%)不应
+    // 注：triggerLevel=2 表示进入了 L3→L4 紧急分支（实际迁移数还取决于是否存在已压缩的 L3 条目）
+    const aggressive = build(false, 90);
+    const conservative = build(true, 90);
+    expect(aggressive.triggerLevel).toBe(2);
+    expect(conservative.triggerLevel).toBeLessThan(2);
+
+    // 接近满窗口（>=97%）：保守模式也应触发紧急落盘
+    const near = build(true, 99);
+    expect(near.triggerLevel).toBe(2);
   });
 });

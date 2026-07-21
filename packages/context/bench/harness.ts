@@ -374,13 +374,17 @@ export function runDocQA(
   doc: string,
   question: string,
   maxWindow = 100_000,
+  opts?: { withinWindow?: boolean },
 ): {
   baseline: { content: string; tokens: number };
   managed: { messages: LLMMessage[]; tokens: number; downgraded: number; usePercent: number };
 } {
-  // ── 朴素基线：只取文档末尾（模拟窗口截断） ──
+  // ── 朴素基线 ──
+  // 超窗口：只取文档末尾（模拟窗口截断，模型根本看不到前半部分）
+  // 窗口内（withinWindow）：文档本身就在窗口内，基线取全文
   const approxChars = maxWindow * CHARS_PER_TOKEN;
-  const baseContent = doc.length > approxChars ? doc.slice(-approxChars) : doc;
+  const baseContent =
+    opts?.withinWindow || doc.length <= approxChars ? doc : doc.slice(-approxChars);
   const baseTokens = estimateTokens(baseContent);
 
   // ── 管理组：用 ContextManager 逐段处理 ──

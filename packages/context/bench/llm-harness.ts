@@ -25,8 +25,17 @@ export interface LLMMessage {
 
 // ─── LLM 调用 ────────────────────────────────────────────
 
+/** 按 provider 拼出 chat/completions 端点（智谱/千问/DeepSeek/OpenAI 各有差异） */
+function chatUrl(baseUrl: string): string {
+  const u = baseUrl.replace(/\/+$/, "");
+  if (u.endsWith("/v4") || u.includes("/api/paas")) return `${u}/chat/completions`; // 智谱 GLM
+  if (u.includes("/compatible-mode")) return `${u}/v1/chat/completions`; // 通义千问 DashScope
+  if (u.endsWith("/v1")) return `${u}/chat/completions`; // DeepSeek / OpenAI
+  return `${u}/v1/chat/completions`;
+}
+
 export async function callLLM(config: LLMConfig, messages: LLMMessage[]): Promise<string> {
-  const resp = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+  const resp = await fetch(chatUrl(config.baseUrl), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

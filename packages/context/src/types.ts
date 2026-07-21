@@ -89,6 +89,8 @@ export interface ManagementPolicy {
   hardThreshold: number; // 默认 0.50
   /** 总 token 超过此值 → 强制将最冷 L3 条目迁移到 L4 */
   emergencyThreshold: number; // 默认 0.85
+  /** 保守模式：紧急 L3→L4 深存仅在接近满窗口(>=0.97)时触发，避免正常对话里仍可召回的内容过早落盘（召回延迟/失败率上升） */
+  conservative?: boolean;
   /** 距离当前话题多少轮才算"非活跃" */
   topicDistance: number; // 默认 3
   /** 单条消息超过此 token 直接评估是否该压缩归档 */
@@ -101,10 +103,24 @@ export const DEFAULT_MANAGEMENT_POLICY: ManagementPolicy = {
   softThreshold: 0.20,
   hardThreshold: 0.50,
   emergencyThreshold: 0.85,
+  conservative: false,
   topicDistance: 3,
   maxChunkBeforeManage: 4000,
   userOverride: "auto",
 };
+
+/**
+ * 计算实际生效的紧急阈值（L3→L4 深存触发点）。
+ *
+ * - 普通模式：直接用 `emergencyThreshold`（默认 0.85），窗口用到 85% 就把最冷 L3 内容压到磁盘 L4。
+ * - 保守模式（`conservative: true`）：抬到 `max(emergencyThreshold, 0.97)`，即只有接近满窗口时才落盘，
+ *   避免正常对话里仍可召回的内容被过早迁移到磁盘（召回延迟/失败率上升）。
+ *
+ * 若用户在保守模式下显式设了更高的 emergencyThreshold（如 0.99），以较大值为准。
+ */
+export function effectiveEmergencyThreshold(policy: ManagementPolicy): number {
+  return policy.conservative ? Math.max(policy.emergencyThreshold, 0.97) : policy.emergencyThreshold;
+}
 
 /**
  * 上下文放置记录。

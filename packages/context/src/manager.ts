@@ -30,6 +30,7 @@ import {
   ContextPlacementConflictError,
   EMPTY_TASK_CONTEXT,
   DEFAULT_MANAGEMENT_POLICY,
+  effectiveEmergencyThreshold,
   CAPACITY_ENFORCE_THRESHOLD,
   CAPACITY_ENFORCE_STEPS,
   TRUNCATE_THRESHOLD,
@@ -822,13 +823,17 @@ export class ContextManager {
     }
 
     // Level 2: 紧急阈值 → L3→L4 深存
-    if (usePercent >= policy.emergencyThreshold) {
+    // 单位对齐：usePercent 是百分比(0–100)，emergencyEff 是比例(0–1)，故 ×100
+    const emergencyEff = effectiveEmergencyThreshold(policy);
+    const emergencyPct = emergencyEff * 100;
+    if (usePercent >= emergencyPct) {
       triggerLevel = 2;
       this.logger.debug(
-        `manage L2: use=${usePercent.toFixed(0)}% ≥ emergency=${policy.emergencyThreshold}, L3→L4 深存`,
+        `manage L2: use=${usePercent.toFixed(0)}% ≥ emergency=${emergencyPct.toFixed(0)}%${policy.conservative ? " (conservative)" : ""}, L3→L4 深存`,
       );
       l4MigratedCount = this.downgradeColdestL3ToL4();
-      this.forceForgetNonFocused();
+      // 保守模式：不主动遗忘非聚焦条目，避免把仍可召回的内容丢到磁盘
+      if (!policy.conservative) this.forceForgetNonFocused();
     }
 
     return {

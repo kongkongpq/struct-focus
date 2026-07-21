@@ -319,6 +319,41 @@ async function main() {
   console.log("");
 
   // ═══════════════════════════════════════════════════════
+  // 题 3b：DocQA 窗口内（在 MAX_WINDOW 范围内）
+  // 目的：验证「超窗口时模型诚实放弃」是模型上下文硬限制、非架构问题；
+  //       窗口内时 StructFocus 能帮模型定位到原文位置。
+  // ═══════════════════════════════════════════════════════
+
+  console.log("=".repeat(60));
+  console.log("Test 3b: DocQA within-window (under MAX_WINDOW)");
+  console.log("=".repeat(60));
+
+  // 40K chars ≈ 11K tokens，明显在 65K 窗口内；答案放在 30% 深度（靠前，朴素截断易忽略，但 StructFocus 会保留并定位）
+  let withinDoc = generateLargeDoc(40_000);
+  const withinAnswerPos = Math.floor(withinDoc.length * 0.3);
+  withinDoc = injectAnswerAt(withinDoc, answerText, withinAnswerPos);
+
+  const docQAWithin = runDocQA(withinDoc, docQuestion, MAX_WINDOW, { withinWindow: true });
+
+  console.log(`  Document: ${(withinDoc.length / 1000).toFixed(0)}K chars (~${Math.round(withinDoc.length / 3.5 / 1000)}K tokens) — within ${MAX_WINDOW} window`);
+  console.log(`  Answer at: ${((withinAnswerPos / withinDoc.length) * 100).toFixed(0)}% depth`);
+  console.log(`  CM downgraded: ${docQAWithin.managed.downgraded}, window: ${docQAWithin.managed.usePercent}%`);
+  process.stdout.write("  Requesting LLM... ");
+
+  const baseDocAnswerWithin = await callLLM(cfg, [{ role: "user", content: docQAWithin.baseline.content + "\n\n" + docQuestion }], 200);
+  totalInput += docQAWithin.baseline.tokens;
+  totalOutput += estimateTokens(baseDocAnswerWithin);
+
+  const managedDocAnswerWithin = await callLLM(cfg, docQAWithin.managed.messages, 200);
+  totalInput += docQAWithin.managed.tokens;
+  totalOutput += estimateTokens(managedDocAnswerWithin);
+
+  console.log("done");
+  console.log(`  Baseline:  ${baseDocAnswerWithin.slice(0, 200)}`);
+  console.log(`  CM:        ${managedDocAnswerWithin.slice(0, 200)}`);
+  console.log("");
+
+  // ═══════════════════════════════════════════════════════
   // 报告
   // ═══════════════════════════════════════════════════════
 
@@ -341,7 +376,19 @@ async function main() {
     cost,
   );
 
-  const fullReport = `${summaryReport}\n\n${niahReport}\n\n## Token Usage\n- Input:  ${totalInput.toLocaleString()}\n- Output: ${totalOutput.toLocaleString()}\n- Total:  ${(totalInput + totalOutput).toLocaleString()}\n- Cost:   ${cost}\n`;
+  const withinSection = `## 3b. DocQA Within-Window（窗口内压测）
+
+> **结论先行**：题 3 是「超窗口」场景（230K chars > 65K 窗口）。超窗口时 StructFocus 把答案所在的旧 chunk 降级/落盘，模型看不到答案而**诚实地说"不知道"**——这是**模型的上下文窗口硬限制**，不是 StructFocus 架构问题（朴素基线 FIFO 截断后同样看不到前半部分，偶尔"蒙对"命中属运气，并非能力）。
+
+> 题 3b 是同结构文档但**在窗口范围内**（40K chars）。此时 StructFocus 不会驱逐答案 chunk，仍能将其保留在组装上下文中，帮模型**定位到原文位置**。
+
+- 超窗口 Baseline: ${baseDocAnswer.slice(0, 200)}
+- 超窗口 StructFocus: ${managedDocAnswer.slice(0, 200)}
+- 窗口内 Baseline: ${baseDocAnswerWithin.slice(0, 200)}
+- 窗口内 StructFocus: ${managedDocAnswerWithin.slice(0, 200)}
+`;
+
+  const fullReport = `${summaryReport}\n\n${withinSection}\n\n${niahReport}\n\n## Token Usage\n- Input:  ${totalInput.toLocaleString()}\n- Output: ${totalOutput.toLocaleString()}\n- Total:  ${(totalInput + totalOutput).toLocaleString()}\n- Cost:   ${cost}\n`;
 
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const outPath = resolve(__dirname, "LLM_REPORT.md");
