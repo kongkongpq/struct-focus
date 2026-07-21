@@ -244,6 +244,25 @@ function deterministicSummary(text: string): string {
   ].join("\n");
 }
 
+// ─── 超时保护 ───────────────────────────────────────────
+
+/** 给 Promise 加超时；超时后 reject（调用方应回退到确定性摘要） */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} 超时(${ms}ms)`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      },
+    );
+  });
+}
+
 // ─── 主概括函数 ─────────────────────────────────────────
 
 /**
@@ -262,23 +281,19 @@ export async function summarizeToCapsule(
   // Step 1: 语义分块
   const chunks = chunkBySemantic(input.entries);
 
-  // Step 2: 每块生成摘要
-  const chunkSummaries: string[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const chunkText = chunks[i]!.map((e) => e.content).join("\n\n");
-    if (llmCall) {
-      const prompt = buildSummarizePrompt(chunkText, category, i, chunks.length);
-      try {
-        const result = await llmCall(prompt);
-        chunkSummaries.push(result);
-      } catch {
-        // 回退
-        chunkSummaries.push(deterministicSummary(chunkText));
-      }
-    } else {
-      chunkSummaries.push(deterministicSummary(chunkText));
+  // Step 2: 每块并发生成摘要（LLM 调用 Promise.all，单块 10s 超时后回退确定性摘要）
+  const summarizeChunk = async (chunkIdx: number): Promise<string> => {
+    const chunkText = chunks[chunkIdx]!.map((e) => e.content).join("\n\n");
+    if (!llmCall) return deterministicSummary(chunkText);
+    const prompt = buildSummarizePrompt(chunkText, category, chunkIdx, chunks.length);
+    try {
+      return await withTimeout(llmCall(prompt), 10_000, `chunk ${chunkIdx} LLM`);
+    } catch {
+      // 失败/超时：回退到确定性摘要，不影响主流程
+      return deterministicSummary(chunkText);
     }
-  }
+  };
+  const chunkSummaries = await Promise.all(chunks.map((_, i) => summarizeChunk(i)));
 
   // Step 3: 全量文本（用于实体提取 + CapsuleStore.buildCapsule）
   const fullText = input.entries.map((e) => e.content).join("\n");
