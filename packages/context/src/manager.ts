@@ -1325,7 +1325,8 @@ export class ContextManager {
       .map((e) => ({ id: e.id, tokens: e.tokenCount, protectedBy: e.protectedBy! }));
 
     const suggestions: string[] = [];
-    if (stats.usePercent >= this.managementPolicy.hardThreshold) {
+    // 单位对齐：usePercent 是百分比(0–100)，hardThreshold 是比例(0–1)，故 ×100
+    if (stats.usePercent >= this.managementPolicy.hardThreshold * 100) {
       suggestions.push(`上下文占用 ${stats.usePercent}%，已达高层级管理；若仍超限请主动 forget 非必要文件`);
     }
     for (const e of active) {

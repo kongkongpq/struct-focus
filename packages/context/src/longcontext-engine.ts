@@ -27,6 +27,7 @@ import { ContextManager } from "./manager.js";
 import { ContentStore, type StoredContent } from "./content-store.js";
 import { CapsuleStore, type Capsule } from "./capsule.js";
 import type { SummarizeOutput } from "./summarize.js";
+import type { ManagementPolicy } from "./types.js";
 
 
 // ─── 配置 ───────────────────────────────────────────────
@@ -427,6 +428,24 @@ export class LongContextEngine {
   /** 获取 CapsuleStore（高级用户） */
   getCapsules(): CapsuleStore {
     return this.cm.getCapsuleStore();
+  }
+
+  // ─── 管理策略（热更新） ─────────────────────────────
+
+  /**
+   * 设置管理策略（热更新，立即生效）。
+   * 可调整阈值与模式，例如开启保守模式：
+   *   engine.setManagementPolicy({ conservative: true })
+   * 保守模式下 emergencyThreshold 抬到 max(emergencyThreshold, 0.97)，
+   * 只有接近满窗口时才把最冷 L3 内容落盘到 L4，避免可召回内容过早丢到磁盘。
+   */
+  setManagementPolicy(policy: Partial<ManagementPolicy>): void {
+    this.cm.setManagementPolicy(policy);
+  }
+
+  /** 读取当前管理策略（含默认值与 conservative 标志） */
+  getManagementPolicy(): ManagementPolicy {
+    return this.cm.getManagementPolicy();
   }
 
   /** 运行 autoManage（窗口内三层管理 + 持续清理 + 质询） */

@@ -14,6 +14,8 @@ import { pathToFileURL } from "node:url";
 import {
   LongContextEngine,
   type LongContextEngineOptions,
+  type ManagementPolicy,
+  effectiveEmergencyThreshold,
 } from "@structfocus/context";
 
 const SERVER_NAME = "struct-context-mcp";
@@ -80,6 +82,22 @@ const TOOLS: McpTool[] = [
         level: { type: "string", enum: ["L0", "L1", "L2"], description: "加载级别" },
       },
       required: ["path"],
+    },
+  },
+  {
+    name: "context_set_policy",
+    description: "热更新上下文管理策略（立即生效）。最常用：{ conservative: true } 开启保守模式（emergencyThreshold 抬到 0.97，窗口接近满才落盘 L4）。也可调 emergencyThreshold/hardThreshold/softThreshold/topicDistance/maxChunkBeforeManage/userOverride。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        conservative: { type: "boolean", description: "保守模式：仅接近满窗口(≥0.97)才把最冷 L3 内容落盘到 L4" },
+        softThreshold: { type: "number", description: "非活跃占比 ≥ 此值开始标记/预压缩（默认 0.20，比例）" },
+        hardThreshold: { type: "number", description: "非活跃占比 ≥ 此值执行概括归档 L2→L3（默认 0.50，比例）" },
+        emergencyThreshold: { type: "number", description: "总窗口占用 ≥ 此值触发 L3→L4 深存（默认 0.85，比例；保守模式抬到 0.97）" },
+        topicDistance: { type: "number", description: "主题距离阈值（默认 3）" },
+        maxChunkBeforeManage: { type: "number", description: "触发管理前最大 chunk（默认 4000）" },
+        userOverride: { type: "string", enum: ["auto", "aggressive", "conservative"], description: "用户覆盖模式（默认 auto）" },
+      },
     },
   },
 ];
@@ -173,6 +191,7 @@ async function callTool(
     }
     case "context_status": {
       const stats = await engine.getStats();
+      const policy = engine.getManagementPolicy();
       const report = {
         totalFed: stats.totalFed,
         totalSummarized: stats.totalSummarized,
@@ -180,6 +199,16 @@ async function callTool(
         activeEntries: stats.activeEntries,
         storedEntries: stats.storedEntries,
         lastSummarizeAt: stats.lastSummarizeAt,
+        policy: {
+          conservative: policy.conservative,
+          effectiveEmergencyThreshold: effectiveEmergencyThreshold(policy),
+          emergencyThreshold: policy.emergencyThreshold,
+          hardThreshold: policy.hardThreshold,
+          softThreshold: policy.softThreshold,
+          topicDistance: policy.topicDistance,
+          maxChunkBeforeManage: policy.maxChunkBeforeManage,
+          userOverride: policy.userOverride,
+        },
       };
       return textResult(JSON.stringify(report, null, 2));
     }
@@ -198,6 +227,26 @@ async function callTool(
       });
       if (!result.ok) return textResult(`✗ ${result.output}`);
       return textResult(result.output);
+    }
+    case "context_set_policy": {
+      const policy: Partial<ManagementPolicy> = {};
+      const bool = (k: keyof ManagementPolicy, v: unknown) => { if (typeof v === "boolean") (policy as Record<string, unknown>)[k] = v; };
+      const num = (k: keyof ManagementPolicy, v: unknown) => { if (typeof v === "number") (policy as Record<string, unknown>)[k] = v; };
+      const str = (k: keyof ManagementPolicy, v: unknown) => { if (typeof v === "string") (policy as Record<string, unknown>)[k] = v; };
+      bool("conservative", args.conservative);
+      num("softThreshold", args.softThreshold);
+      num("hardThreshold", args.hardThreshold);
+      num("emergencyThreshold", args.emergencyThreshold);
+      num("topicDistance", args.topicDistance);
+      num("maxChunkBeforeManage", args.maxChunkBeforeManage);
+      str("userOverride", args.userOverride);
+      if (Object.keys(policy).length === 0) return textResult("error: 至少提供一个策略字段（如 conservative / emergencyThreshold）");
+      engine.setManagementPolicy(policy);
+      const p = engine.getManagementPolicy();
+      return textResult(
+        `✓ 策略已更新。conservative=${p.conservative} effectiveEmergency=${effectiveEmergencyThreshold(p)} ` +
+        `emergency=${p.emergencyThreshold} hard=${p.hardThreshold} soft=${p.softThreshold} userOverride=${p.userOverride}`,
+      );
     }
     default:
       throw new Error(`unknown tool: ${name}`);
