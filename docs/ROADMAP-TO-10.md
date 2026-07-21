@@ -460,4 +460,11 @@ npx tsx bench/run.ts --suite xxx
   - 新增 `tomessages-timeline.test.ts`(4)：10 轮交替 / 首末角色 / 胶囊 system 前缀 / 召回注入为 system 且 forgetScoped 可清理。
   - 同步修正 `longcontext-recall.test.ts` 中胶囊摘要断言（user→system 块）。
   - 总用例 **183**（context 167 + mcp 16）。
-- **待办组**：2.3 BM25 精度 bench / 1.3 多跳 QA（需 GLM-4 key）/ 1.4 DocQA（需 key）/ 3.1 bench 整合（run.ts 仅 NIAH，缺 multihop/docqa/bm25 suite）/ 3.2 报告标准化 / 4.1 英文 README / 4.2 Gitee CI / 4.3 CONTRIBUTING。
+- **2.3 BM25 搜索精度基准**（roadmap 二.3）— **已完成**
+  - 新建 `bench/search-precision.mjs`（本地可跑、无需 API key，导入 `../dist/index.js` 的 `ContextManager.getStore()`）。
+  - 数据集：100 条模拟被驱逐条目（20 主题簇 × 5），含跨主题噪声词；20 查询（16 精确 + 4 同义模糊）+ 金标准。
+  - 对比 BM25 vs 简单 `includes` 的 Precision@5 / Recall@5。
+  - 结果：**精确查询 BM25 P@5=R@5=1.000，≥ includes（1.000）**；全集 BM25 0.900 / includes 0.800。合格标准双 PASS。
+  - 诚实结论：4 个同义查询中 2 个（主从复制拓扑、外部知识库问答）零词面重叠致 BM25/includes 双失效；另 2 个 BM25 借子词（调度/淘汰策略）仍可命中而 includes 失败 → BM25 OR 式打分比 includes-AND 更鲁棒，但二者均无语义能力（hybrid 接口已预留）。
+  - 报告输出至 `docs/benchmarks/bm25-precision.md`。
+- **待办组**：1.3 多跳 QA（需 GLM-4 key）/ 1.4 DocQA（需 key）/ 3.1 bench 整合（run.ts 仅 NIAH，缺 multihop/docqa/bm25 suite）/ 3.2 报告标准化（benchmarks 索引 + 多报告）/ 4.1 英文 README / 4.2 Gitee CI / 4.3 CONTRIBUTING。
