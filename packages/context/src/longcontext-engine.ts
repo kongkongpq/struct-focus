@@ -376,14 +376,15 @@ export class LongContextEngine {
    */
   async recall(
     query: string,
-    opts?: { topK?: number },
+    opts?: { topK?: number; conversationId?: string },
   ): Promise<RecallResult> {
     const topK = opts?.topK ?? 5;
 
-    // 1. ContentStore BM25 搜索
+    // 1. ContentStore BM25 搜索（默认只召回当前对话的存储内容，可按 conversationId 覆盖）
     const searchResults = await this.cm.getStore().search(query, {
       mode: "bm25",
       topK: topK * 2,
+      conversationId: opts?.conversationId ?? this.cm.getCurrentConversationId(),
     });
 
     // 2. CapsuleStore 匹配（元数据 + chunkSummaries 全文）
@@ -596,11 +597,19 @@ export class LongContextEngine {
   }
 
   /**
-   * 开启新对话：清空活跃条目，保留 ContentStore/CapsuleStore。
-   * 上一段对话的内容已概括/驱逐到存储中，可通过 recall 找回。
+   * 开启新对话：切换到指定对话 id，清空活跃条目，保留 ContentStore/CapsuleStore。
+   * 上一段对话的内容已概括/驱逐到存储中（带上 conversationId 标记），可通过 recall 按对话找回。
+   *
+   * @param id 对话 id（可选；省略则保持当前对话）
+   * @returns 被清空的条目数量
    */
-  newConversation(): number {
-    return this.cm.newConversation();
+  newConversation(id?: string): number {
+    return this.cm.newConversation(id);
+  }
+
+  /** 获取当前对话 id（roadmap 一.1） */
+  getCurrentConversationId(): string {
+    return this.cm.getCurrentConversationId();
   }
 
   // ─── 内部 ─────────────────────────────────────────────

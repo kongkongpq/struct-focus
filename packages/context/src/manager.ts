@@ -291,6 +291,8 @@ export class ContextManager {
   private capacityExceededSteps = 0;
   /** 管理策略（用户可调） */
   private managementPolicy: ManagementPolicy = { ...DEFAULT_MANAGEMENT_POLICY };
+  /** 当前对话 id（roadmap 一.1 Per-Conversation 隔离）。appendEntry 时打标；toMessages 仅渲染当前对话 */
+  private currentConversationId = "default";
 
   constructor(opts: ContextManagerOptions = {}) {
     this.maxWindow = opts.maxWindow ?? getMaxContextWindow();
@@ -314,10 +316,16 @@ export class ContextManager {
   // ─── 追加条目 ──────────────────────────────────────────
 
   /**
-   * 开启新对话：清空活跃条目，保留 ContentStore/CapsuleStore。
-   * 返回被清空的条目数量，这些条目中的非保护内容仍可通过 recall 找回。
+   * 开启新对话：切换到指定对话（或保持当前 id），清空活跃条目，保留 ContentStore/CapsuleStore。
+   *
+   * 隔离语义：非保护条目被归档到 ContentStore（带上 conversationId 标记，可被按对话召回），
+   * 活跃数组被清空，从而下一轮 toMessages 只渲染新对话的条目。
+   *
+   * @param id 对话 id（可选；省略则保持当前 currentConversationId）
+   * @returns 被清空的条目数量，非保护内容仍可通过 recall 按对话找回
    */
-  newConversation(): number {
+  newConversation(id?: string): number {
+    if (id) this.currentConversationId = id;
     const count = this.entries.length;
     // 受保护条目（focus 的）保留，其余移入 ContentStore
     for (let i = this.entries.length - 1; i >= 0; i--) {
@@ -328,6 +336,7 @@ export class ContextManager {
         this.store.save({
           entryId: e.id, originalContent: toSave, originalTokenCount: e.tokenCount,
           savedAt: Date.now(), reason: "new-conversation", source: e.source, sourceType: e.sourceType,
+          conversationId: e.conversationId,
         }).catch(() => {});
       }
     }
@@ -404,6 +413,7 @@ export class ContextManager {
       protectedBy: init.protectedBy,
       source: init.source,
       sourceType: init.sourceType,
+      conversationId: this.currentConversationId,
       ageFactor: 1,
       currentEvictionScore: 0,
       ...(init.toolCallId ? { toolCallId: init.toolCallId } : {}),
@@ -595,6 +605,7 @@ export class ContextManager {
         reason: "forget",
         source: e.source,
         sourceType: e.sourceType,
+        conversationId: e.conversationId,
       }).catch((err) => this.logger.warn(`ContentStore save forget failed: ${String(err)}`));
       this.updateAttentionWaste(wasted, e.sourceType ?? e.type, "forget");
       count++;
@@ -619,6 +630,7 @@ export class ContextManager {
       reason: "forget",
       source: e.source,
       sourceType: e.sourceType,
+      conversationId: e.conversationId,
     }).catch((err) => this.logger.warn(`ContentStore save forgetNoise failed: ${String(err)}`));
     this.updateAttentionWaste(e.tokenCount, e.sourceType ?? e.type, "forget");
     return true;
@@ -745,6 +757,7 @@ export class ContextManager {
         this.store.save({
           entryId: e.id, originalContent: toSave, originalTokenCount: e.tokenCount,
           savedAt: now, reason: "forget", source: e.source, sourceType: e.sourceType,
+          conversationId: e.conversationId,
         }).catch(() => {});
         noiseCleaned++;
         noiseTokens += e.tokenCount;
@@ -764,6 +777,7 @@ export class ContextManager {
         this.store.save({
           entryId: e.id, originalContent: toSave, originalTokenCount: e.tokenCount,
           savedAt: now, reason: "evict", source: e.source, sourceType: e.sourceType,
+          conversationId: e.conversationId,
         }).catch(() => {});
         decayEvicted++;
         decayTokens += e.tokenCount;
@@ -1009,6 +1023,7 @@ export class ContextManager {
           reason: "downgrade_L4",
           source: e.source,
           sourceType: e.sourceType,
+          conversationId: e.conversationId,
         })
         .catch((err) => this.logger.warn(`downgradeToL4 save failed: ${String(err)}`));
 
@@ -1093,6 +1108,7 @@ export class ContextManager {
         reason: "truncate",
         source: e.source,
         sourceType: e.sourceType,
+        conversationId: e.conversationId,
       }).catch((err) => this.logger.warn(`ContentStore save failed: ${String(err)}`));
       this.updateAttentionWaste(before - after, e.sourceType ?? e.type, "truncate");
       count++;
@@ -1117,6 +1133,7 @@ export class ContextManager {
         reason: "forget",
         source: e.source,
         sourceType: e.sourceType,
+        conversationId: e.conversationId,
       }).catch((err) => this.logger.warn(`ContentStore save layer2 failed: ${String(err)}`));
       this.updateAttentionWaste(wasted, e.sourceType ?? e.type, "layer2-forget");
     }
@@ -1367,6 +1384,11 @@ export class ContextManager {
   /** 全部条目（含已驱逐，供审计/召回） */
   getAllEntries(): ContextEntry[] {
     return [...this.entries];
+  }
+
+  /** 当前对话 id（roadmap 一.1 Per-Conversation 隔离） */
+  getCurrentConversationId(): string {
+    return this.currentConversationId;
   }
 
   /** 当前聚焦文件列表（focus 原语） */
@@ -1649,9 +1671,14 @@ export class ContextManager {
       const placement = this.getPlacement(e.id);
       if (placement) placementMap.set(e.id, placement);
     }
+    // roadmap 一.1：toMessages 仅渲染当前对话条目。
+    // 受保护条目（focus 文件等跨对话持久上下文）始终保留，避免切换对话丢失聚焦文件。
+    const activeEntries = this.getEntries().filter(
+      (e) => e.conversationId === this.currentConversationId || e.protectedBy,
+    );
     return buildContext({
       systemPrompt,
-      entries: this.getEntries(),
+      entries: activeEntries,
       taskContext: this.taskContext,
       usePercent,
       gitInfo: opts?.gitInfo,
@@ -1882,6 +1909,7 @@ export class ContextManager {
         reason: "forget",
         source: e.source,
         sourceType: e.sourceType,
+        conversationId: e.conversationId,
       }).catch((err) => this.logger.warn(`ContentStore save forgetScoped failed: ${String(err)}`));
       count++;
     }
@@ -1945,6 +1973,7 @@ export class ContextManager {
           sourceType: e.sourceType,
           capsuleSummary: output.l0Summary,
           capsuleId: output.capsule.id,
+          conversationId: e.conversationId,
         });
       }
     }

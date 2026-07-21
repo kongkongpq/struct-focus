@@ -204,6 +204,11 @@ export interface ContextEntry {
   source?: string;
   sourceType?: SourceType;
 
+  // 所属对话 id（roadmap 一.1 Per-Conversation 隔离）。
+  // 由 ContextManager.currentConversationId 在 appendEntry 时打标，
+  // 用于 toMessages 仅渲染当前对话条目、ContentStore.search 按对话过滤召回。
+  conversationId?: string;
+
   // 运行时评分字段
   ageFactor: number; // 越旧越高（0~1+）
   currentEvictionScore: number; // 当前综合驱逐分

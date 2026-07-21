@@ -446,4 +446,11 @@ npx tsx bench/run.ts --suite xxx
   - mcp `server.test.ts` 已覆盖 6 用例（含命中 ContentStore、未知工具 -32603、未知方法 -32601）。
   - 新增 `content-store.test.ts`(7) / `capsule-store.test.ts`(5) / `summarize.test.ts`(6)，共 **+18**；总用例 **175**（context 159 + mcp 16）。
   - 顺带修复：`summarizeToCapsule` 返回值漏了 `chunkSummaries` 字段（接口有、实现无），已补接口+返回；`chunkBySemantic` 实现"同 source 同块"规则。
-- **待办组**：1.1 Per-Conversation 隔离 / 1.2 toMessages 时序 / 2.3 BM25 精度 bench / 1.3 多跳 QA（需 GLM-4 key）/ 1.4 DocQA（需 key）/ 3.1 bench 整合（run.ts 仅 NIAH，缺 multihop/docqa/bm25 suite）/ 3.2 报告标准化 / 4.1 英文 README / 4.2 Gitee CI / 4.3 CONTRIBUTING。
+- **1.1 Per-Conversation 隔离**（roadmap 一.1）— **已完成**
+  - `ContextEntry` 新增 `conversationId?` 字段；`ContextManager` 维护 `currentConversationId`，`appendEntry` 打标，`newConversation(id?)` 切换对话并归档前对话到 ContentStore（带 conversationId）。
+  - `toMessages` 仅渲染 `conversationId === current || protectedBy` 的条目（受保护焦点文件跨对话持久）。
+  - `ContentStore`: `StoredContent`/`IndexEntry`/`SearchOptions` 加 `conversationId`；`search()` 支持按对话过滤召回；10 处 `store.save` 全链路打标。
+  - `LongContextEngine.newConversation(id?)` 透传；`recall()` 默认按 `getCurrentConversationId()` 过滤，可用 `opts.conversationId` 覆盖。
+  - 新增 `conversation-isolation.test.ts`(4)：切换打标 / toMessages 互不污染 / search 按对话过滤 / engine.recall 默认隔离。
+  - 总用例 **179**（context 163 + mcp 16）。
+- **待办组**：1.2 toMessages 时序 / 2.3 BM25 精度 bench / 1.3 多跳 QA（需 GLM-4 key）/ 1.4 DocQA（需 key）/ 3.1 bench 整合（run.ts 仅 NIAH，缺 multihop/docqa/bm25 suite）/ 3.2 报告标准化 / 4.1 英文 README / 4.2 Gitee CI / 4.3 CONTRIBUTING / 1.1 注⑤：LoCoMo bench 脚本按对话 `newConversation` 接线（见下）。

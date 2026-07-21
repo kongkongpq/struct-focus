@@ -74,6 +74,8 @@ async function main() {
   for (let ci = 0; ci < data.length; ci++) {
     const conv = data[ci];
     const A = conv.conversation.speaker_a || "A", B = conv.conversation.speaker_b || "B";
+    // roadmap 一.1：每轮对话显式开启独立对话，归档上一轮并打 conversationId 标记
+    cm.newConversation("c" + (ci + 1));
     const keys = Object.keys(conv.conversation).filter(k => k.startsWith("session_") && !k.endsWith("_date_time"));
     keys.sort((a, b) => parseInt(a.replace("session_", "")) - parseInt(b.replace("session_", "")));
 

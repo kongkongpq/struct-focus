@@ -19,6 +19,8 @@ export interface StoredContent {
   capsuleSummary?: string;
   /** 关联的 capsule id */
   capsuleId?: string;
+  /** 所属对话 id（roadmap 一.1 Per-Conversation 隔离，按对话过滤召回） */
+  conversationId?: string;
 }
 
 export interface SearchResult {
@@ -36,6 +38,8 @@ export interface SearchOptions {
   savedBefore?: number;
   sourcePattern?: string;
   capsuleId?: string;
+  /** 按对话 id 过滤（只召回指定对话的存储内容；省略=不过滤） */
+  conversationId?: string;
 }
 
 // ─── 简易内存 BM25 全文索引 ─────────────────────────────
@@ -45,6 +49,7 @@ interface IndexEntry {
   tokens: Map<string, number>; // token → frequency
   source: string;
   savedAt: number;
+  conversationId: string;
 }
 
 /** 简易 TF-IDF 分词器：按空格/标点分割，最小 2 字符，去停用词 */
@@ -368,6 +373,7 @@ export class ContentStore {
       tokens: tokenMap,
       source: entry.source ?? "",
       savedAt: entry.savedAt,
+      conversationId: entry.conversationId ?? "",
     });
     this.totalIndexedDocs++;
     this.totalIndexedTokens += tokens.length;
@@ -436,6 +442,8 @@ export class ContentStore {
       if (opts.savedBefore && ie.savedAt > opts.savedBefore) continue;
       // 来源过滤
       if (opts.sourcePattern && !ie.source.includes(opts.sourcePattern)) continue;
+      // 对话过滤（roadmap 一.1：只召回当前对话的存储内容）
+      if (opts.conversationId && ie.conversationId !== opts.conversationId) continue;
 
       const docTokens = [...ie.tokens.values()].reduce((a, b) => a + b, 0);
       const score = bm25Score(

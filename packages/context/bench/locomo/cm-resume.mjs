@@ -60,6 +60,8 @@ async function runConvo(ci, conv, maxQA) {
 
   const tmpDir = mkdtempSync(join(tmpdir(), "locomo-cm2-"));
   const cm = new ContextManager({ maxWindow: 128000, storeRoot: join(tmpDir, "content-store"), capsuleRoot: join(tmpDir, "capsules") });
+  // roadmap 一.1：每轮对话显式开启独立对话，条目打 conversationId 标记
+  cm.newConversation("c" + ci);
 
   const keys = Object.keys(conv.conversation).filter(k => k.startsWith("session_") && !k.endsWith("_date_time"));
   keys.sort((a, b) => parseInt(a.replace("session_", "")) - parseInt(b.replace("session_", "")));
