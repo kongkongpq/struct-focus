@@ -132,7 +132,7 @@ export const STANDARD_GRID: HardNIAHPair[] = [
   { noiseSteps: 1200, depth: 1.0, depthLabel: "End(100%)", lengthLabel: "96K", approxTokens: 96 },
 ];
 
-export function runHardNIAHSingle(
+export async function runHardNIAHSingle(
   noiseSteps: number, depth: number, needleIdx: number,
   maxWindow: number, distractorIdx?: number,
 ): { baseline: { messages: { role: string; content: string }[]; stats: { entries: number; tokens: number } };
@@ -170,7 +170,7 @@ export function runHardNIAHSingle(
       mgr.appendObservation(noiseLine(i), { source: `noise-${i}`, taskRelevance: 0.75, sourceType: "file_content" });
     }
     if (i > 0 && i % 30 === 0) mgr.manage();
-    if (i > 0 && i % 60 === 0) mgr.autoManage();
+    if (i > 0 && i % 60 === 0) await mgr.autoManage();
   }
   mgr.appendUser(needle.question);
   const s = mgr.getStats();
@@ -229,7 +229,7 @@ export function injectAnswerAtHard(doc: string, answer: string, position: number
   return doc.slice(0, position) + answer + doc.slice(position);
 }
 
-export function runDocQAHard(
+export async function runDocQAHard(
   doc: string, question: string, maxWindow: number,
 ): { baseline: { content: string; tokens: number };
      managed: { messages: LLMMessage[]; tokens: number; evicted: number; usePercent: number };
@@ -244,7 +244,7 @@ export function runDocQAHard(
     mgr.appendObservation(chunks[i]!, { source: `doc-${i}`, taskRelevance: 0.55, sourceType: "file_content" });
     if (i > 0 && i % 80 === 0) {
       mgr.manage();
-      mgr.autoManage();
+      await mgr.autoManage();
     }
   }
   mgr.appendUser(question);
@@ -265,7 +265,7 @@ export function runDocQAHard(
 
 export interface MultiHopSession { id: number; fact: string; tags: string[]; }
 
-export function runMultiHopMemory(
+export async function runMultiHopMemory(
   sessions: MultiHopSession[],
   noisePerSession: number,
   question: string,
@@ -287,7 +287,7 @@ export function runMultiHopMemory(
     }
   }
 
-  mgr.autoManage();
+  await mgr.autoManage();
   const recalled = mgr.recall("project atlas timeline final");
   mgr.appendUser(question);
   bl.push({ role: "user", content: question });

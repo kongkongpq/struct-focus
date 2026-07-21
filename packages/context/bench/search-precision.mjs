@@ -88,6 +88,61 @@ function includesMatch(content, query) {
   return tokens.every((t) => lower.includes(t));
 }
 
+// ─── 场景 B：多相关条目召回（roadmap 二.3 合格标准「10 个相关条目」） ──────────
+// 说明：roadmap 原文「Recall@5 ≥ 0.7（10 个相关条目）」在数学上不可能——
+// topK=5 最多覆盖 5/10 = 0.5。忠实实现为 Recall@10 ≥ 0.7（top-10 覆盖 ≥7/10）。
+async function multiRelevantScenario() {
+  const root = mkdtempSync(join(tmpdir(), "sf-bm25b-"));
+  const cm = new ContextManager({ maxWindow: 1e9, storeRoot: join(root, "cs"), capsuleRoot: join(root, "cap") });
+  const store = cm.getStore();
+
+  const K = 5, K2 = 10, REL = 10, DISTRACT = 90;
+  const entries = [];
+  const relTopic =
+    "Rust 异步运行时 Tokio 通过 runtime 调度数万并发任务，Tokio 的 async/await 降低线程切换开销，Rust 异步任务在 reactor 上多路复用。";
+  for (let i = 0; i < REL; i++) {
+    entries.push({
+      entryId: `rel__${i}`,
+      originalContent: `${relTopic} 记录${i + 1}：Tokio worker 线程数、Rust 异步运行时调度延迟、并发连接数。`,
+      originalTokenCount: 40, savedAt: Date.now() + i, reason: "benchB", source: "rel.md", conversationId: "benchB",
+    });
+  }
+  const distractTopics = [
+    "Kubernetes HPA 自动扩缩容", "PostgreSQL 分区表", "Redis 集群分片", "gRPC 流式推送",
+    "向量数据库 HNSW 索引", "大模型检索增强 RAG", "OpenTelemetry 链路追踪", "边缘 CDN 缓存",
+    "Kafka 流处理聚合", "WebAssembly 边缘函数", "GraphQL 联邦网关", "SQLite FTS5 全文检索",
+    "JWT 鉴权令牌", "布隆过滤器", "CRC 校验和", "QUIC 传输协议", "CAP 定理权衡", "雪花算法 ID", "LRU 缓存逐出",
+  ];
+  for (let i = 0; i < DISTRACT; i++) {
+    const t = distractTopics[i % distractTopics.length];
+    entries.push({
+      entryId: `dis__${i}`,
+      originalContent: `${t}：分布式系统在${i}号节点上的实践与调优，包含监控、限流与灰度。`,
+      originalTokenCount: 40, savedAt: Date.now() + 1000 + i, reason: "benchB", source: "dis.md", conversationId: "benchB",
+    });
+  }
+  for (const e of entries) await store.save(e);
+
+  const q = "Rust 异步运行时 Tokio 调度 并发 任务";
+  const relIds = new Set(entries.filter((e) => e.entryId.startsWith("rel__")).map((e) => e.entryId));
+  const denom5 = Math.min(K, relIds.size);
+  const denom10 = Math.min(K2, relIds.size);
+
+  const bm25Top5 = await store.search(q, { mode: "bm25", topK: K });
+  const bm25Top10 = await store.search(q, { mode: "bm25", topK: K2 });
+  const bm25R5 = bm25Top5.filter((r) => relIds.has(r.entry.entryId)).length / denom5;
+  const bm25R10 = bm25Top10.filter((r) => relIds.has(r.entry.entryId)).length / denom10;
+
+  const incTop5 = entries.filter((e) => includesMatch(e.originalContent, q)).slice(0, K).map((e) => e.entryId);
+  const incTop10 = entries.filter((e) => includesMatch(e.originalContent, q)).slice(0, K2).map((e) => e.entryId);
+  const incR5 = incTop5.filter((id) => relIds.has(id)).length / denom5;
+  const incR10 = incTop10.filter((id) => relIds.has(id)).length / denom10;
+
+  // 忠实实现：Recall@10 ≥ 0.7（roadmap 字面的 Recall@5≥0.7 在 10 相关+topK=5 下不可达）
+  const passRecall10 = bm25R10 >= 0.7;
+  return { q, relCount: REL, bm25R5, bm25R10, incR5, incR10, passRecall10 };
+}
+
 // ─── 主流程 ───────────────────────────────────────────
 async function main() {
   const root = mkdtempSync(join(tmpdir(), "sf-bm25-"));
@@ -150,14 +205,19 @@ async function main() {
   const passPrecision = agg.bm25PExact >= agg.incPExact - 1e-9;
   console.log(`\n合格标准: BM25 R@5(精确)≥0.7 -> ${passRecall ? "PASS" : "FAIL"} | BM25 P@5(精确)≥includes -> ${passPrecision ? "PASS" : "FAIL"}`);
 
+  // 场景 B：多相关条目召回
+  const scenarioB = await multiRelevantScenario();
+  console.log(`\n场景B(10 相关条目): BM25 R@5=${scenarioB.bm25R5.toFixed(3)} R@10=${scenarioB.bm25R10.toFixed(3)} | includes R@5=${scenarioB.incR5.toFixed(3)} R@10=${scenarioB.incR10.toFixed(3)}`);
+  console.log(`场景B 合格(Recall@10≥0.7, 忠实实现 roadmap 字面不可达的 Recall@5≥0.7): ${scenarioB.passRecall10 ? "PASS" : "FAIL"}`);
+
   // 写报告
-  const md = buildReport(rows, agg, passRecall, passPrecision);
+  const md = buildReport(rows, agg, passRecall, passPrecision, scenarioB);
   const outPath = join(__dir, "..", "..", "..", "docs", "benchmarks", "bm25-precision.md");
   writeFileSync(outPath, md, "utf-8");
   console.log(`\n报告已写入: ${outPath}`);
 }
 
-function buildReport(rows, agg, passRecall, passPrecision) {
+function buildReport(rows, agg, passRecall, passPrecision, scenarioB) {
   const t = (s) => String(s);
   let md = `# BM25 搜索精度基准 (roadmap 二.3)\n\n`;
   md += `> 自动生成于本地基准运行。无外部依赖、无需 API key。\n\n`;
@@ -180,6 +240,16 @@ function buildReport(rows, agg, passRecall, passPrecision) {
   md += `|---|---|---|---|---|---|\n`;
   md += `| 全集 | ${rows.length} | ${agg.bm25P.toFixed(3)} | ${agg.bm25R.toFixed(3)} | ${agg.incP.toFixed(3)} | ${agg.incR.toFixed(3)} |\n`;
   md += `| 精确查询 | ${agg.exactN} | ${agg.bm25PExact.toFixed(3)} | ${agg.bm25RExact.toFixed(3)} | ${agg.incPExact.toFixed(3)} | ${agg.incRExact.toFixed(3)} |\n`;
+
+  md += `\n## 场景 B：多相关条目召回（roadmap 二.3 合格标准「10 个相关条目」）\n\n`;
+  md += `- 数据集：10 条同主题相关条目（Rust 异步运行时 Tokio）+ 90 条干扰，共 100 条。\n`;
+  md += `- 查询：「${scenarioB.q}」，金标准为 10 条 rel__\*。\n`;
+  md += `- 指标：Recall@5（top-5 覆盖相关数/相关总数）与 Recall@10（top-10 覆盖相关数/相关总数）。\n\n`;
+  md += `| 方法 | Recall@5 | Recall@10 |\n|---|---|---|\n`;
+  md += `| BM25 | ${scenarioB.bm25R5.toFixed(3)} | ${scenarioB.bm25R10.toFixed(3)} |\n`;
+  md += `| includes | ${scenarioB.incR5.toFixed(3)} | ${scenarioB.incR10.toFixed(3)} |\n\n`;
+  md += `> ⚠️ **规格矛盾披露**：roadmap 原文合格标准写作「BM25 Recall@5 ≥ 0.7（10 个相关条目，top-5 至少覆盖 7 个）」。该表述在数学上不可能成立——topK=5 最多覆盖 5/10 = 0.5，Recall@5 上界为 0.5。\n`;
+  md += `> 本基准的**忠实实现**为 **Recall@10 ≥ 0.7**（top-10 覆盖 ≥7/10 相关条目），实测 BM25 Recall@10 = ${scenarioB.bm25R10.toFixed(3)} → ${scenarioB.passRecall10 ? "✅ PASS" : "❌ FAIL"}。\n\n`;
 
   md += `\n## 合格标准判定\n\n`;
   md += `- **BM25 Recall@5(精确) ≥ 0.7** → ${passRecall ? "✅ PASS" : "❌ FAIL"}（实测 ${agg.bm25RExact.toFixed(3)}）\n`;

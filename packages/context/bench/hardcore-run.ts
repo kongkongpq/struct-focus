@@ -48,7 +48,7 @@ async function main() {
     const hasDist = cell % 2 === 0;
     const distIdx = hasDist ? (cell % 3) : undefined;
 
-    const result = hc.runHardNIAHSingle(pair.noiseSteps, pair.depth, needleIdx, MAX_W, distIdx);
+    const result = await hc.runHardNIAHSingle(pair.noiseSteps, pair.depth, needleIdx, MAX_W, distIdx);
     const tag = `${pair.lengthLabel} ${pair.depthLabel}${hasDist ? " +SEM-DIST" : ""}`;
     process.stdout.write(`  ${tag.padEnd(28)}`);
 
@@ -99,7 +99,7 @@ async function main() {
   doc = hc.injectAnswerAtHard(doc, answerText, ansPos);
   const q = "这次安全事件的根本原因是什么？CVE编号？受影响系统有哪些？";
 
-  const dqa = hc.runDocQAHard(doc, q, MAX_W);
+  const dqa = await hc.runDocQAHard(doc, q, MAX_W);
   console.log(`  Doc: ${(doc.length/1000)|0}K chars (~${Math.round(doc.length/3.5/1000)}K tokens)`);
   console.log(`  Answer at 35% (~${Math.round(ansPos/3.5/1000)}K tokens)`);
   console.log(`  Baseline window: ${(dqa.baseline.tokens/1000).toFixed(1)}K tokens (last ~${((dqa.baseline.tokens*3.5)/1000)|0}K chars)`);
@@ -170,7 +170,7 @@ async function main() {
 6. 数据库栈包含哪些产品？（以最终确认为准）`;
 
   console.log(`  Sessions: ${atlasSessions.length}, Noise/session: 80`);
-  const mh = hc.runMultiHopMemory(atlasSessions, 80, mhQ, MAX_W);
+  const mh = await hc.runMultiHopMemory(atlasSessions, 80, mhQ, MAX_W);
   const totalChars = atlasSessions.reduce((a, s) => a + s.fact.length + 80 * 120, 0);
   console.log(`  Total chars: ~${(totalChars/1000)|0}K (~${(totalChars/3.5/1000)|0}K tokens)`);
   console.log(`  Recalled: ${mh.managed.recalledCount} entries`);

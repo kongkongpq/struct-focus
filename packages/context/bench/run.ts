@@ -95,7 +95,7 @@ async function main() {
 
   for (const pair of GRID) {
     const needleSet = (GRID.indexOf(pair) % 3) + 1;
-    const result = runNIAHSingle(pair.noiseSteps, pair.depth, needleSet, MAX_WINDOW);
+    const result = await runNIAHSingle(pair.noiseSteps, pair.depth, needleSet, MAX_WINDOW);
 
     const tag = `${pair.lengthLabel} × ${pair.depthLabel}`;
     process.stdout.write(`  ${tag.padEnd(22)}`);
@@ -297,7 +297,7 @@ async function main() {
   largeDoc = injectAnswerAt(largeDoc, answerText, answerPos);
 
   const docQuestion = "Enterprise Edition 的年费调整后是多少？请直接给出金额。如果你不知道，请说你不知道。";
-  const docQA = runDocQA(largeDoc, docQuestion, MAX_WINDOW);
+  const docQA = await runDocQA(largeDoc, docQuestion, MAX_WINDOW);
 
   console.log(`  Document: ${(largeDoc.length / 1000).toFixed(0)}K chars (~${Math.round(largeDoc.length / 3.5 / 1000)}K tokens)`);
   console.log(`  Answer at: ${((answerPos / largeDoc.length) * 100).toFixed(0)}% depth (≈${Math.round(answerPos / 3.5 / 1000)}K tokens)`);
@@ -333,7 +333,7 @@ async function main() {
   const withinAnswerPos = Math.floor(withinDoc.length * 0.3);
   withinDoc = injectAnswerAt(withinDoc, answerText, withinAnswerPos);
 
-  const docQAWithin = runDocQA(withinDoc, docQuestion, MAX_WINDOW, { withinWindow: true });
+  const docQAWithin = await runDocQA(withinDoc, docQuestion, MAX_WINDOW, { withinWindow: true });
 
   console.log(`  Document: ${(withinDoc.length / 1000).toFixed(0)}K chars (~${Math.round(withinDoc.length / 3.5 / 1000)}K tokens) — within ${MAX_WINDOW} window`);
   console.log(`  Answer at: ${((withinAnswerPos / withinDoc.length) * 100).toFixed(0)}% depth`);

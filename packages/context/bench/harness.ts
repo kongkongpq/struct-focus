@@ -130,7 +130,7 @@ function haystackLine(i: number): string {
 }
 
 /** 单次 NIAH 测试 */
-export function runNIAHSingle(
+export async function runNIAHSingle(
   noiseSteps: number,
   depth: number,
   needleSet: number,
@@ -165,7 +165,7 @@ export function runNIAHSingle(
     }
     // 每 50 步触发 autoManage
     if (i > 0 && i % 50 === 0) {
-      mgr.autoManage();
+      await mgr.autoManage();
     }
   }
   mgr.appendUser(question);
@@ -370,7 +370,7 @@ export function injectAnswerAt(doc: string, answerText: string, charPosition: nu
   return before + "\n\n" + answerText + "\n\n" + after;
 }
 
-export function runDocQA(
+export async function runDocQA(
   doc: string,
   question: string,
   maxWindow = 100_000,
@@ -407,7 +407,7 @@ export function runDocQA(
     }
     // 每 20 chunk 触发 autoManage
     if (i > 0 && i % (CHUNK * 20) === 0) {
-      mgr.autoManage();
+      await mgr.autoManage();
     }
   }
   mgr.appendUser(question);

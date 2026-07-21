@@ -126,7 +126,7 @@ export interface NeedleTask {
   noiseSteps: number;     // 多少步是噪音
 }
 
-export function runNeedleTask(task: NeedleTask): {
+export async function runNeedleTask(task: NeedleTask): {
   baseline: { entries: number; peakTokens: number; messages: LLMMessage[] };
   managed: { entries: number; peakTokens: number; messages: LLMMessage[] };
 } {
@@ -165,7 +165,7 @@ export function runNeedleTask(task: NeedleTask): {
     }
     // 每 5 步调一次 autoManage
     if (i % 5 === 0) {
-      void mgr.autoManage(); // fire-and-forget here for sync harness
+      await mgr.autoManage(); // 必须 await：否则 evict 标记（in-memory）不生效，与朴素基线比较失真
     }
   }
   // 强制一轮管理

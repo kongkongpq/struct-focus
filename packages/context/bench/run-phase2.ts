@@ -35,7 +35,7 @@ async function main() {
   doc = hc.injectAnswerAtHard(doc, answerText, ansPos);
   const q = "这次安全事件的根本原因是什么？CVE 编号？受影响系统有哪些？";
 
-  const dqa = hc.runDocQAHard(doc, q, 128_000);
+  const dqa = await hc.runDocQAHard(doc, q, 128_000);
   console.log(`  Doc: ${(doc.length/1000)|0}K chars (~${Math.round(doc.length/3.5/1000)}K tokens)`);
   console.log(`  Answer at 80% (~${Math.round(ansPos/3.5/1000)}K tokens)`);
   console.log(`  CM evicted: ${dqa.managed.evicted}, window: ${dqa.managed.usePercent}%`);
@@ -71,7 +71,7 @@ async function main() {
 
   const mhQ = "Phoenix项目：1.总预算？2.最终消息队列Kafka还是Pulsar？3.推理框架和模型？4.安全漏洞？5.GA日期？";
 
-  const mh = hc.runMultiHopMemory(sessions, 40, mhQ, 128_000);
+  const mh = await hc.runMultiHopMemory(sessions, 40, mhQ, 128_000);
   console.log(`  Recalled: ${mh.managed.recalledCount} entries`);
 
   const bMh = await retryLLM(cfg, mh.baseline.messages, 500);

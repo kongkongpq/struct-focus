@@ -250,6 +250,7 @@
 
 **合格标准**：
 - BM25 的 Recall@5 ≥ 0.7（10 个相关条目，BM25 top-5 中至少覆盖 7 个）。
+  > 注：此表述数学上不可达（topK=5 最多覆盖 5/10=0.5）。实际以 Recall@10 ≥ 0.7 实现（见 `bench/search-precision.mjs` 场景 B 与报告）。
 - BM25 的 Precision@5 ≥ includes 的 Precision@5（即至少不比简单字符串匹配差）。
 - 输出对比表到 `docs/benchmarks/bm25-precision.md`。
 
@@ -440,7 +441,7 @@ npx tsx bench/run.ts --suite xxx
   - Bug1（CapsuleStore 重复初始化）：核实构造函数仅 `new CapsuleStore` 一次（manager.ts:304），**已不存在**。
   - Bug2（MCP summarize 参数未用）：当前 MCP 无 `context_summarize` 工具（8 工具体系），**路线图滞后，不适用**。
   - Bug3（forget noise source 匹配不到）：`forget(target)` 按路径/ID，`forgetNoise(id)` 按 id，不受 source 影响，**设计已规避**。
-  - Bug4（bench `autoManage()` 缺 await）：**部分修复**——`cm-resume.mjs`/`cm-bench.mjs`（GLM-4 证据脚本，async 上下文）与 `mechanics.mjs`（run 变 async）已补 `await`，smoke 测试通过；`harness.ts`/`hardcore.ts` 的调用位于**同步导出函数**内，改 await 需 async 重构（有回归风险），暂缓——核心降级靠同步 `manage()` 已生效。
+  - Bug4（bench `autoManage()` 缺 await）：**已完全修复**——`grep -r "autoManage()" bench/`（排除类型定义/注释）现全部含 `await`。本轮将 `runNIAHSingle`/`runDocQA`(harness.ts)、`runHardNIAHSingle`/`runDocQAHard`/`runMultiHopMemory`(hardcore.ts)、`runNeedleTask`(llm-harness.ts) 改为 `async` 并 `await autoManage()`，同步更新其调用方 `run.ts`/`run-llm.ts`/`hardcore-run.ts`/`run-phase2.ts` 加 `await`（均为 async 上下文，无回归）。此前已修的 `cm-resume.mjs`/`cm-bench.mjs`/`cm-hardcore.mjs`/`mechanics.mjs` 维持。
   - Bug5（hardThreshold 单位）：`90608a4` 已修，**已有回归测试**（manager.test.ts `L1 (非活跃达 hardThreshold)`）。
 - **2.2 缺失单测**
   - mcp `server.test.ts` 已覆盖 6 用例（含命中 ContentStore、未知工具 -32603、未知方法 -32601）。
@@ -466,6 +467,7 @@ npx tsx bench/run.ts --suite xxx
   - 对比 BM25 vs 简单 `includes` 的 Precision@5 / Recall@5。
   - 结果：**精确查询 BM25 P@5=R@5=1.000，≥ includes（1.000）**；全集 BM25 0.900 / includes 0.800。合格标准双 PASS。
   - 诚实结论：4 个同义查询中 2 个（主从复制拓扑、外部知识库问答）零词面重叠致 BM25/includes 双失效；另 2 个 BM25 借子词（调度/淘汰策略）仍可命中而 includes 失败 → BM25 OR 式打分比 includes-AND 更鲁棒，但二者均无语义能力（hybrid 接口已预留）。
+  - **场景 B（本轮新增）**：10 条同主题相关 + 90 条干扰，验证多相关召回。⚠️ 披露：roadmap 原文合格标准「BM25 Recall@5 ≥ 0.7（10 个相关条目，top-5 至少覆盖 7 个）」**数学上不可能**——topK=5 最多覆盖 5/10=0.5。忠实实现为 **Recall@10 ≥ 0.7**，实测 BM25 Recall@10 = 1.000 → PASS。
   - 报告输出至 `docs/benchmarks/bm25-precision.md`。
 - **4.1 英文 README**（roadmap 四.1）— **已完成**
   - 新建 `README_EN.md`：覆盖 one-liner / Why / 30-sec Quickstart / Architecture(ASCII 四层冷热图) / 8 MCP 工具表（按实际代码为 8 个，非 roadmap 草稿写的 5 个）/ Benchmarks 表 + 链接 / Install&Build / License。

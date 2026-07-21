@@ -150,7 +150,7 @@ async function runModel(config: LLMConfig): Promise<ModelRow> {
   let totalOutput = 0;
 
   // 题 1：Needle-in-Haystack
-  const needleResult = runNeedleTask(NEEDLE_TASK);
+  const needleResult = await runNeedleTask(NEEDLE_TASK);
   console.log("  题1 发送朴素基线...");
   const needleBaseAnswer = await callLLM(config, needleResult.baseline.messages as LLMMessage[]);
   totalInput += estimateTokens(needleResult.baseline.messages.map((m) => m.content));
