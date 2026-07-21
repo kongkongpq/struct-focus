@@ -1,0 +1,50 @@
+# StructFocus CI — Gitee Go（兼容 GitHub Actions 工作流语法）
+#
+# 触发：push / PR 到 main 时自动运行
+#   1. typecheck（tsc -b + mcp 类型检查）
+#   2. build（生成 context/dist）
+#   3. test（vitest run，context + mcp 共 151 用例）
+#   4. 机制验证（mechanics.mjs，无需 LLM Key）
+#
+# 启用：Gitee 仓库 → 「DevOps / Gitee Go」→ 新建流水线，关联本文件。
+# 镜像与节点：Node 22（MCP Server 要求 >= 22.6，22.x 满足）。
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          # 用 corepack 启用 pnpm（>= 9）
+          cache: "pnpm"
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Mechanism proof (no LLM required)
+        run: node packages/context/bench/mechanics.mjs
