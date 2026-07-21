@@ -1,35 +1,34 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+所有重要变更记录于此文件。
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
+版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)（SemVer）。
 
-## [Unreleased]
+## [0.2.0] - Unreleased
 
-### Added
-- Harvard architecture context management (I-Context + D-Context with Git versioning)
-- AST/LSP-level code editing via TypeScript LanguageService (rename, refactor, symbol extraction)
-- Five-layer memory system with vector hybrid search (sqlite-vec + FTS5)
-- 2PC atomic multi-file transactions with checkpoint/rollback
-- N-dimensional permission matrix with approval queue
-- LLM fallback chain with cooldown and exponential backoff
-- Task granularity controller with contract-based decomposition
-- Early stop detector (5 dimensions: diminishing returns, budget, errors, repetition, progress)
-- Dynamic phase-based prompt pruning (explore → plan → execute → verify → summarize)
-- Structured tool output compression
-- Docker/gVisor sandbox execution
-- PTY manager with expect-style auto-responder
-- MCP server (JSON-RPC 2.0 over stdio)
-- Agent-as-Judge evaluation framework with SWE-bench lite adapter
-- Plugin SDK with 4 example plugins (git-guard, cost-limiter, code-review, todo-tracker)
-- Electron desktop shell with chat UI
-- CLI with resume mode, slash commands, and spinner
-- GitHub Actions CI + eval regression workflows
+### 新增
+- **保守模式（conservative）**：`ManagementPolicy` 新增 `conservative` 标志与 `effectiveEmergencyThreshold()` 助手。开启后 `emergencyThreshold` 抬到 `max(emergencyThreshold, 0.97)`，仅当窗口接近满才把最冷 L3 内容落盘到 L4，避免可召回内容过早丢到磁盘。
+- **多模型 benchmark harness**：`packages/context/bench/run-llm.ts` 支持 DeepSeek / 智谱 GLM / 通义千问 / GPT-4o-mini 矩阵跑分（读各家 Key 环境变量或 `STRUCT_LLM_*` 覆盖）。配套 `BENCHMARK_MATRIX.md` 对比表 + 每模型 `LLM_REPORT_<model>.md`。
+- **胶囊数量上限**：`LongContextEngine` 新增 `capsuleMaxCount`（默认 50，`STRUCT_CAPSULE_MAX_COUNT`，0=不限制），`summarize` 后按 `createdAt` 踢最旧胶囊并物理删除 JSON（防 `listCapsules` / L1 渲染在千级胶囊时变慢、占大量 token）。
+- **ContentStore 磁盘 LRU**：`ContentStore` 新增 `maybeCleanup()` / `dirSize()` / `getStorageStats()` / `enforceStorageLimit()`，`save()` 后异步按 `savedAt` 淘汰最旧条目，回到 `STRUCT_STORE_MAX_MB`（默认 512MB，0=无限）的 90% 以内。
+- **LLM 压缩失败告警**：`LongContextEngine` 新增 `getLlmStatus()` / `checkLlmHealth()`，三级状态 `unknown / ok / degraded / failed`；`llmCall` 包裹失败计数，首次失败 `logger.warn`；MCP 启动时异步 ping `/models` 健康检查。失败时压缩自动降级为本地确定性摘要，不阻断主流程。
+- **MCP 工具补齐**：新增 `context_set_policy`（热更新管理策略）。`context_status` 现返回 `storeStats`（磁盘占用）、`llmStatus`（压缩健康）、`policy`（含 `effectiveEmergencyThreshold`）。
+- **Gitee CI/CD**：`.gitee/workflows/ci.yml` 在 push/PR 到 main 时自动 typecheck → build → test → `mechanics.mjs` 机制验证。
 
-## [0.1.0] - 2026-07-14
+### 修复
+- **`hardThreshold` 单位错配**：`manager.ts` `getReflection()` 中 `usePercent`（百分比 0–100）直接对比 `hardThreshold`（比例 0–1）恒为真，已改为 `×100` 对齐。
+- **`emergencyThreshold` 单位错配**：`manager.ts` `manage()` 中 `usePercent` 对比 `emergencyThreshold`（比例）恒为真导致紧急 L3→L4 几乎每次都触发，已改为 `usePercent >= effectiveEmergencyThreshold × 100`。
 
-### Added
-- Initial public release.
-- 6 packages: framework, memory, harness, context, agent, app
-- 367 tests passing
+### 变更
+- **发布包拆分**：移除过时 Electron 外壳 `packages/app`，仓库现仅含 `@structfocus/context` 与 `@structfocus/mcp` 两个包。
+- **MCP 工具数 5 → 6**（新增 `context_set_policy`）。
+- 版本号统一升至 `0.2.0`。
+
+## [0.1.0] - 2026-07-19
+
+### 新增
+- 初始公开版本。长上下文管理引擎：四层冷热架构（L1 活跃 / L2 压缩 / L3 胶囊 / L4 磁盘深存）、语义胶囊召回、ContentStore 全文检索、LongContextEngine 公共 API。
+- MCP Server（`@structfocus/mcp`）：stdio 传输，零依赖实现 MCP 协议，暴露 5 个上下文工具。
+- 确定性压缩回退（无 LLM Key 时仍可运行）。
+- 本地机制验证 `mechanics.mjs`（无 LLM 依赖）。

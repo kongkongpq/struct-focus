@@ -1,6 +1,6 @@
 {
   "name": "@structfocus/context",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "StructFocus 上下文引擎 — 四层冷热架构 / 胶囊召回 / LongContextEngine",
   "type": "module",
   "main": "./dist/index.js",
