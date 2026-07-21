@@ -440,7 +440,7 @@ npx tsx bench/run.ts --suite xxx
   - Bug1（CapsuleStore 重复初始化）：核实构造函数仅 `new CapsuleStore` 一次（manager.ts:304），**已不存在**。
   - Bug2（MCP summarize 参数未用）：当前 MCP 无 `context_summarize` 工具（8 工具体系），**路线图滞后，不适用**。
   - Bug3（forget noise source 匹配不到）：`forget(target)` 按路径/ID，`forgetNoise(id)` 按 id，不受 source 影响，**设计已规避**。
-  - Bug4（bench `autoManage()` 缺 await）：**真实存在**——`cm-resume.mjs`/`cm-bench.mjs`/`harness.ts`/`hardcore.ts`/`mechanics.mjs` 多处 fire-and-forget，**待修**。
+  - Bug4（bench `autoManage()` 缺 await）：**部分修复**——`cm-resume.mjs`/`cm-bench.mjs`（GLM-4 证据脚本，async 上下文）与 `mechanics.mjs`（run 变 async）已补 `await`，smoke 测试通过；`harness.ts`/`hardcore.ts` 的调用位于**同步导出函数**内，改 await 需 async 重构（有回归风险），暂缓——核心降级靠同步 `manage()` 已生效。
   - Bug5（hardThreshold 单位）：`90608a4` 已修，**已有回归测试**（manager.test.ts `L1 (非活跃达 hardThreshold)`）。
 - **2.2 缺失单测**
   - mcp `server.test.ts` 已覆盖 6 用例（含命中 ContentStore、未知工具 -32603、未知方法 -32601）。

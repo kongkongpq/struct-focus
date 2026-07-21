@@ -26,13 +26,13 @@ function inject(doc, text, pos) {
   return doc.slice(0, pos) + "\n\n" + text + "\n\n" + doc.slice(pos);
 }
 
-function run(doc, question) {
+async function run(doc, question) {
   const m = new ContextManager({ maxWindow: MAX_WINDOW });
   m.setTaskContext({ currentSubtasks: ["分析长文档并回答关键问题"], editingFiles: [], failingTests: [], focusedSymbols: [], recentErrors: [] });
   for (let i = 0; i < doc.length; i += CHUNK) {
     m.appendObservation(doc.slice(i, i + CHUNK), { source: `doc-chunk-${Math.floor(i / CHUNK)}`, taskRelevance: 0.6, sourceType: "file_content" });
     if (i > 0 && i % (CHUNK * 10) === 0) m.manage();
-    if (i > 0 && i % (CHUNK * 20) === 0) m.autoManage();
+    if (i > 0 && i % (CHUNK * 20) === 0) await m.autoManage();
   }
   m.appendUser(question);
   const msgs = m.toMessages("你正在分析一个长文档。基于上下文中的信息直接回答问题。如果你不知道答案，请说你不知道。");
@@ -45,12 +45,12 @@ console.log("=== StructFocus DocQA 机制证明（无需 LLM）===\n");
 
 // 超窗口：230K chars ≈ 66K tokens > 65K 窗口，答案在 70% 深度（最旧处）
 const overDoc = inject(filler(230_000), ANSWER, Math.floor(230_000 * 0.7));
-const over = run(overDoc, QUESTION);
+const over = await run(overDoc, QUESTION);
 const overFound = over.assembled.includes("PRC-2026-Q3-88421");
 
 // 窗口内：40K chars ≈ 11K tokens < 65K 窗口，答案在 30% 深度
 const withinDoc = inject(filler(40_000), ANSWER, Math.floor(40_000 * 0.3));
-const within = run(withinDoc, QUESTION);
+const within = await run(withinDoc, QUESTION);
 const withinFound = within.assembled.includes("PRC-2026-Q3-88421");
 
 console.log(`超窗口 doc : ${(overDoc.length / 1000).toFixed(0)}K chars (~${Math.round(overDoc.length / 3.5 / 1000)}K tokens)，答案在 70% 深度`);

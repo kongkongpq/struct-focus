@@ -93,7 +93,7 @@ async function main() {
         totalChars += text.length;
         cm.appendUser(text);
       }
-      const report = cm.autoManage();
+      const report = await cm.autoManage();
       if (report.triggerLevel >= 0) {
         console.log("  [CM] " + sk + " use%" + report.usePercent + " L" + report.triggerLevel + " evict:" + report.evictedCount + " comp:" + report.compressedCount);
       }

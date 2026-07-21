@@ -71,7 +71,7 @@ async function runConvo(ci, conv, maxQA) {
       totalChars += text.length;
       cm.appendUser(text);
     }
-    const r = cm.autoManage();
+    const r = await cm.autoManage();
     if (r.triggerLevel >= 0) console.log("  [CM] " + sk + " use%" + r.usePercent + " L" + r.triggerLevel + " evict:" + r.evictedCount);
   }
   const msgs = cm.toMessages();
