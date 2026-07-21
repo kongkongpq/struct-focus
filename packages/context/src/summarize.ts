@@ -28,6 +28,8 @@ export interface SummarizeOutput {
   capsule: Capsule;
   l1Summary: string;
   l0Summary: string;
+  /** 每个语义块的摘要文本（LLM 输出或确定性回退） */
+  chunkSummaries: string[];
   extractedEntities: { name: string; type: "person" | "date" | "file" | "decision" | "event"; mentions: number }[];
   pointers: string[];
 }
@@ -102,10 +104,15 @@ export function chunkBySemantic(
       flushChunk();
     }
 
-    // 规则4: 同一 source 保持在一起（除非已在不同块）
-    if (i > 0 && entry.source && entry.source !== entries[i - 1]?.source) {
-      // 不同说话者，如果块不大可以继续
-      // 不强制切分，但标记新的说话者段
+    // 规则4: 同一 source 的连续条目保持在同一块；source 切换且当前块已较大时，另起一块
+    // （避免把同一说话者的连续消息拆到两块，也避免不同说话者挤在一块导致召回串味）
+    if (
+      i > 0 &&
+      entry.source &&
+      entry.source !== entries[i - 1]?.source &&
+      currentChars > maxChars * 0.5
+    ) {
+      flushChunk();
     }
 
     currentChunk.push(entry);
@@ -338,6 +345,7 @@ export async function summarizeToCapsule(
     capsule,
     l1Summary,
     l0Summary,
+    chunkSummaries,
     extractedEntities: entities,
     pointers,
   };

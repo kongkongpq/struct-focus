@@ -124,7 +124,7 @@ const { injectText } = await engine.recall(query);
 ```bash
 pnpm install
 pnpm build      # tsc -b（context → dist）
-pnpm test       # vitest run（context + mcp 共 157 用例）
+pnpm test       # vitest run（context 159 + mcp 16 = 175 用例）
 pnpm lint       # eslint packages/context/src packages/mcp/src
 ```
 
