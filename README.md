@@ -68,15 +68,16 @@ STRUCT_LLM_BASE_URL=http://localhost:11434/v1
 STRUCT_LLM_MODEL=qwen2:7b
 ```
 
-接入后，Agent 可调用 5 个上下文工具：
+接入后，Agent 可调用 6 个上下文工具：
 
 | 工具 | 作用 |
 |:---|:---|
 | `context_inject` | 注入一条上下文（对话 / 工具输出 / 日志） |
 | `context_recall` | 按自然语言语义召回历史上下文 |
-| `context_status` | 查看引擎状态（token / 胶囊数 / 活跃条目） |
+| `context_status` | 查看引擎状态（token / 胶囊数 / 活跃条目 / 当前策略） |
 | `context_forget` | 忘记（卸载）指定上下文 |
 | `context_focus` | 聚焦指定文件/目录到工作上下文 |
+| `context_set_policy` | 热更新管理策略（如 `{ conservative: true }` 开启保守模式） |
 
 ## 代码级使用（TypeScript 宿主）
 

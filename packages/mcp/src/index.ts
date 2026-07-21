@@ -1,11 +1,12 @@
 // @structfocus/mcp — StructFocus 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）
 //
-// 暴露「上下文管理」原语为 5 个 MCP Tools（由任意 MCP 客户端接入）：
+// 暴露「上下文管理」原语为 6 个 MCP Tools（由任意 MCP 客户端接入）：
 //   - context_inject  注入一条上下文（喂给引擎）
 //   - context_recall  语义召回历史上下文
-//   - context_status  查看引擎状态（统计/胶囊数/占用）
+//   - context_status  查看引擎状态（统计/胶囊数/占用/当前策略）
 //   - context_forget  忘记（卸载）指定上下文
 //   - context_focus   聚焦指定文件/目录
+//   - context_set_policy  热更新管理策略（含 conservative 保守模式）
 //
 // 不依赖 @modelcontextprotocol/sdk，直接实现 MCP 的 JSON-RPC over stdio 协议，
 // 以便作为「上下文中间层」被 Claude Code / Cursor / Cline / 任意支持 MCP 的 Agent 宿主接入。

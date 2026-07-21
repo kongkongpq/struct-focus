@@ -26,11 +26,10 @@ pnpm build          # Build all packages
 packages/
   context/   — @structfocus/context: the context engine (LongContextEngine, ContextManager,
                ContentStore, CapsuleStore, ContextMiddleware). Core library, import standalone.
-  app/       — structfocus-app: Electron desktop shell (chat UI + context engine).
   mcp/       — @structfocus/mcp: MCP Server (JSON-RPC 2.0 over stdio).
 ```
 
-`context` is the foundation; `app` and `mcp` both depend on it. No circular dependencies.
+`context` is the foundation; `mcp` depends on it. No circular dependencies.
 
 ## How to Contribute
 

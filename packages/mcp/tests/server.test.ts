@@ -1,4 +1,4 @@
-// MCP Server 测试 — 直接驱动 JSON-RPC 协议处理器，验证 5 个工具的握手与调用
+// MCP Server 测试 — 直接驱动 JSON-RPC 协议处理器，验证 6 个工具的握手与调用
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
@@ -31,7 +31,7 @@ describe("MCP JSON-RPC handshake", () => {
     expect(res.id).toBe(2);
   });
 
-  it("tools/list 暴露恰好 5 个工具", async () => {
+  it("tools/list 暴露恰好 6 个工具", async () => {
     const res: any = await handle({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} });
     const names = res.result.tools.map((t: any) => t.name);
     expect(names).toEqual([
@@ -40,8 +40,9 @@ describe("MCP JSON-RPC handshake", () => {
       "context_status",
       "context_forget",
       "context_focus",
+      "context_set_policy",
     ]);
-    expect(names.length).toBe(5);
+    expect(names.length).toBe(6);
   });
 
   it("未知方法返回 method not found", async () => {
@@ -55,7 +56,7 @@ describe("MCP JSON-RPC handshake", () => {
   });
 });
 
-describe("MCP 工具调用（5 个工具）", () => {
+describe("MCP 工具调用（6 个工具）", () => {
   it("context_inject + context_status 注入并可查状态", async () => {
     const inject: any = await handle({
       jsonrpc: "2.0", id: 10, method: "tools/call",
@@ -112,6 +113,29 @@ describe("MCP 工具调用（5 个工具）", () => {
       params: { name: "context_recall", arguments: { query: "不存在的奇怪查询xyz" } },
     });
     expect(res.result.content[0].text).toBeTruthy();
+  });
+
+  it("context_set_policy 热更新策略并可被 status 反映", async () => {
+    const set: any = await handle({
+      jsonrpc: "2.0", id: 20, method: "tools/call",
+      params: { name: "context_set_policy", arguments: { conservative: true, emergencyThreshold: 0.99 } },
+    });
+    expect(set.result.content[0].text).toContain("策略已更新");
+    expect(set.result.content[0].text).toContain("conservative=true");
+
+    const status: any = await handle({
+      jsonrpc: "2.0", id: 21, method: "tools/call",
+      params: { name: "context_status", arguments: {} },
+    });
+    const report = JSON.parse(status.result.content[0].text);
+    expect(report.policy.conservative).toBe(true);
+    expect(report.policy.effectiveEmergencyThreshold).toBe(0.99);
+
+    // 还原，避免影响其他用例
+    await handle({
+      jsonrpc: "2.0", id: 22, method: "tools/call",
+      params: { name: "context_set_policy", arguments: { conservative: false, emergencyThreshold: 0.85 } },
+    });
   });
 
   it("未知工具返回 -32603 错误", async () => {

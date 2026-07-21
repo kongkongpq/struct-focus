@@ -4,7 +4,7 @@
 > 一句话：**长对话里不丢消息，只是不一直放在眼前** —— 概括 → 胶囊 → 指针 → 召回。
 
 > 新品类定位：**MCP 上下文管理（Context-as-a-Tool）**。StructFocus 不绑定任何 Agent 框架，
-> 而是作为一个 MCP Server 暴露 5 个上下文工具，被 Claude Code / Cursor / Cline / 任意支持 MCP 的客户端直接调用。
+> 而是作为一个 MCP Server 暴露 6 个上下文工具，被 Claude Code / Cursor / Cline / 任意支持 MCP 的客户端直接调用。
 
 ---
 
@@ -26,14 +26,13 @@ NIAH（针在草堆）基准见 `packages/context/bench/hardcore.ts`：20 格硬
 
 ## 2. 仓库结构（pnpm monorepo，3 包）
 
-重构后只保留 **3 个包**，历史包 `agent` / `framework` / `harness` / `memory` 已删除（其类型契约已内联进 `@structfocus/context`）。
+重构后只保留 **2 个包**，历史包 `agent` / `framework` / `harness` / `memory` 已删除（其类型契约已内联进 `@structfocus/context`），桌面 Electron 外壳 `structfocus-app` 也已移除。
 引擎本身与任何 agent 框架**解耦**，Agent 宿主通过标准 **MCP** 协议接入。
 
 | 包 | 角色 |
 |:---|:---|
 | `@structfocus/context` | **核心引擎**：长上下文管理引擎（L1–L4 四层冷热 / 胶囊 / 指针 / 预算桶 / 语义召回） |
-| `@structfocus/mcp` | 上下文引擎的 **MCP Server**（stdio 传输，零依赖实现 MCP 协议，暴露 5 个工具） |
-| `structfocus-app` | 桌面/应用外壳（Electron 预置，最小集成示例） |
+| `@structfocus/mcp` | 上下文引擎的 **MCP Server**（stdio 传输，零依赖实现 MCP 协议，暴露 6 个工具） |
 
 ---
 
@@ -48,8 +47,8 @@ NIAH（针在草堆）基准见 `packages/context/bench/hardcore.ts`：20 格硬
                 ▼
 ┌─────────────────────────────────────┐
 │  Layer 2 — @structfocus/mcp         │   MCP Server，零依赖实现协议
-│  5 个工具：                         │   context_inject / context_recall
-│   context_inject  context_recall    │   context_status / context_forget / context_focus
+│  6 个工具：                         │   context_inject / context_recall / context_status
+│   context_forget  context_focus     │   context_set_policy（含 conservative 保守模式）
 │   context_status  context_forget    │
 │   context_focus                     │
 └───────────────┬─────────────────────┘
@@ -71,15 +70,16 @@ NIAH（针在草堆）基准见 `packages/context/bench/hardcore.ts`：20 格硬
 
 ---
 
-## 4. MCP 工具契约（5 个）
+## 4. MCP 工具契约（6 个）
 
 | 工具 | 入参 | 行为 |
 |:---|:---|:---|
 | `context_inject` | `content`, `source?`, `type?` | 注入一条上下文（user/tool/observation） |
 | `context_recall` | `query`, `topK?` | 自然语言语义召回（胶囊摘要 + 相关原文片段） |
-| `context_status` | — | 引擎状态：累计注入/概括 token、胶囊数、活跃/归档条目、最后概括时间 |
+| `context_status` | — | 引擎状态：累计注入/概括 token、胶囊数、活跃/归档条目、最后概括时间、当前策略 |
 | `context_forget` | `target` | 忘记（卸载）指定上下文：文件路径或条目 ID |
 | `context_focus` | `path`, `symbols?`, `level?` | 聚焦文件/目录到工作上下文（L0 元数据 / L1 符号大纲 / L2 全文） |
+| `context_set_policy` | `conservative?`, `softThreshold?`, `hardThreshold?`, `emergencyThreshold?`, `topicDistance?`, `maxChunkBeforeManage?`, `userOverride?` | 热更新管理策略（如 `{ conservative: true }` 开启保守模式，emergency 抬到 0.97） |
 
 接入示例（`mcp.json`，三行搞定）：
 
@@ -159,7 +159,7 @@ system → git → task → focused → history → budget
 两种接入方式：
 
 **A. 作为 MCP Server（推荐，零框架改造）**
-任意支持 MCP 的客户端在 `mcp.json` 里登记 `struct-context-mcp`，即可调用上述 5 个工具，无需任何框架源码改动。
+任意支持 MCP 的客户端在 `mcp.json` 里登记 `struct-context-mcp`，即可调用上述 6 个工具，无需任何框架源码改动。
 
 **B. 作为代码级中间件（TypeScript 宿主）**
 任何支持 pre/post LLM hook 的框架，实现 `ContextMiddleware` 即可接入，无需引入框架依赖：
