@@ -721,6 +721,8 @@ export class ContextManager {
     const continuous = this.manageContinuous();
     // 四层降级管理（阈值触发）
     const result = this.manage();
+    // 真正的 LLM 概括归档为胶囊（修复：此前 autoManage 永不概括，L2→L3 只标记不落胶囊）
+    await this.summarizeInactive();
     // 守护轨质询（冲突检测 / 缺口检测 / 一致性检测）
     const inquiry = await this.runInquiry();
     // 容量强制检查
@@ -877,6 +879,49 @@ export class ContextManager {
       truncatedCount,
       l4MigratedCount,
     };
+  }
+
+  /**
+   * 对「非活跃旧内容」做真正的 LLM 概括归档（L2→L3 为胶囊）——产品核心「LLM 压缩」落点。
+   *
+   * 背景断点：本类 manage() 的 L1 分支（downgradeToL3）只把条目标记为 compressed，
+   * 从不调用 summarizeAndCapsule；真正的「概括成胶囊 + 原文落盘 ContentStore」仅存在于
+   * engine.summarize()，而它被 feed→maybeAutoSummarize 的 50K token 阈值卡住（正常用量触达不到）。
+   * 因此「LLM 压缩归档为胶囊」在生产路径里实际上是死逻辑。
+   *
+   * 修复：autoManage 在 manage() 之后调用本方法，对相对话题锚点非活跃的旧内容做概括。
+   * 30s 节流避免每步都打 LLM；无 LLM 时走确定性回退（仍生成胶囊）。
+   */
+  private lastSummarizeAt = 0;
+  private async summarizeInactive(): Promise<number> {
+    const now = Date.now();
+    if (now - this.lastSummarizeAt < 30_000) return 0;
+
+    const policy = this.managementPolicy;
+    const active = this.entries.filter((e) => !e.evicted);
+    let lastActiveIdx = -1;
+    for (let i = active.length - 1; i >= 0; i--) {
+      if (active[i]!.type === "user" || active[i]!.type === "assistant") {
+        lastActiveIdx = i;
+        break;
+      }
+    }
+    const ageThresholdMs = 5 * 60 * 1000;
+    const inactive = active.filter((e, i) => {
+      if (e.type === "system" || e.protectedBy) return false;
+      if (lastActiveIdx >= 0 && lastActiveIdx - i > policy.topicDistance) return true;
+      if (e.timestamp > 0 && now - e.timestamp > ageThresholdMs) return true;
+      return false;
+    });
+    // 至少攒够一批再概括，避免琐碎胶囊
+    if (inactive.length < 5) return 0;
+
+    this.lastSummarizeAt = now;
+    const result = await this.summarizeAndCapsule(
+      (e) => inactive.some((x) => x.id === e.id),
+      { taskId: `auto_${Date.now()}`, category: "conversation", summary: "autoManage 自动概括旧上下文" },
+    );
+    return result ? 1 : 0;
   }
 
   /**

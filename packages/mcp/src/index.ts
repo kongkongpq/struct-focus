@@ -216,8 +216,13 @@ async function callTool(
         source: args.source ? String(args.source) : undefined,
         type: (args.type as "user" | "tool" | "observation") ?? "observation",
       });
+      // 关键接线：注入后触发 autoManage（AI 接管上下文——压缩/驱逐/窗口管理）。
+      // 此前 context_inject 只 feed 不管理，导致长对话无限膨胀、产品核心价值失效。
+      // autoManage 在未达阈值时低成本（runInquiry 因无 editingFiles 直接 no-op，
+      // manageContinuous 仅清理超龄噪音）；达阈值才做 LLM 压缩（即设计意图）。
+      await engine.autoManage();
       const stats = await engine.getStats();
-      return textResult(`✓ 已注入。活跃条目 ${stats.activeEntries}，累计注入 ${stats.totalFed} 字符。`);
+      return textResult(`✓ 已注入并管理。活跃条目 ${stats.activeEntries}，累计注入 ${stats.totalFed} 字符，胶囊 ${stats.capsuleCount}。`);
     }
     case "context_recall": {
       const query = String(args.query ?? "");

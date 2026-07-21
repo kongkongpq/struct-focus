@@ -25,7 +25,7 @@ export interface ContextMiddleware {
   /** LLM 调用前：喂入本轮新消息 + 语义召回相关历史，返回增强后的消息数组 */
   preLlmCall(messages: Message[]): Promise<Message[]>;
   /** LLM 返回后：把 assistant 回复喂回 StructFocus（本轮 user 已在 preLlmCall 喂入） */
-  postLlmCall(userMsg: string, assistantMsg: string): void;
+  postLlmCall(userMsg: string, assistantMsg: string): Promise<void>;
   /** Agent 主动语义召回，返回可直接注入的上下文文本（无命中返回空串） */
   recall(query: string): Promise<string>;
 }
@@ -63,9 +63,14 @@ export function createContextMiddleware(
     }
 
     // 2. 语义召回：找回被概括/驱逐的历史（胶囊 chunkSummaries + ContentStore 全文）
+    //    使用 recallAndInject：召回内容同时 append 为 [recall] 条目进入被管理上下文，
+    //    使「AI 接管上下文」闭环（否则召回内容只临时注入、不进引擎，autoManage 看不到）。
+    //    闭环清理：每轮调用前先 forgetRecalled() 清掉上一轮注入的 [recall] 条目，
+    //    否则活跃窗口会被历次召回注入不断累积膨胀（此前 forgetRecalled 零调用 = 真实泄漏）。
     let recallText = "";
     if (lastUser) {
-      const r = await engine.recall(lastUser.content, { topK });
+      engine.forgetRecalled();
+      const r = await engine.recallAndInject(lastUser.content, { topK });
       if (r.injectText && !r.injectText.includes("未找到")) recallText = r.injectText;
     }
 
@@ -85,8 +90,13 @@ export function createContextMiddleware(
     return out;
   }
 
-  function postLlmCall(_userMsg: string, assistantMsg: string): void {
+  async function postLlmCall(_userMsg: string, assistantMsg: string): Promise<void> {
+    // 1. 把 assistant 回复喂回引擎
     engine.feed(assistantMsg, { type: "observation", source: "middleware" });
+    // 2. 触发 autoManage：压缩/驱逐/窗口管理（AI 接管上下文）。
+    //    必须 await：否则 in-memory 的 evict 标记（同步部分）虽生效，
+    //    但胶囊/深存等异步副作用与报告不可靠，且下一轮 recall 可能读到未收敛状态。
+    await engine.autoManage();
   }
 
   async function recall(query: string): Promise<string> {

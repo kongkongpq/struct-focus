@@ -469,6 +469,15 @@ npx tsx bench/run.ts --suite xxx
   - 诚实结论：4 个同义查询中 2 个（主从复制拓扑、外部知识库问答）零词面重叠致 BM25/includes 双失效；另 2 个 BM25 借子词（调度/淘汰策略）仍可命中而 includes 失败 → BM25 OR 式打分比 includes-AND 更鲁棒，但二者均无语义能力（hybrid 接口已预留）。
   - **场景 B（本轮新增）**：10 条同主题相关 + 90 条干扰，验证多相关召回。⚠️ 披露：roadmap 原文合格标准「BM25 Recall@5 ≥ 0.7（10 个相关条目，top-5 至少覆盖 7 个）」**数学上不可能**——topK=5 最多覆盖 5/10=0.5。忠实实现为 **Recall@10 ≥ 0.7**，实测 BM25 Recall@10 = 1.000 → PASS。
   - 报告输出至 `docs/benchmarks/bm25-precision.md`。
+- **代码审计：LLM 压缩与 AI 上下文管理接线**（roadmap 二/四 隐含要求）— **已完成（本轮）**
+  - 用户要求核查「写了逻辑但没接上」的断点，逐层审计 `LongContextEngine` / `ContextManager` / `middleware` / MCP `index.ts`。
+  - **确认 4 处核心断点并全部修复**：
+    1. `autoManage`（压缩/驱逐/窗口管理核心）此前**只在 tests/bench 调用**，MCP `context_inject` 与 `middleware.pre/postLlmCall` 都只 `feed` 不管理 → 已接入：`context_inject` 在 `feed` 后 `await autoManage()`（index.ts:223）；`middleware.postLlmCall` 改为 async 并 `await autoManage()`（middleware.ts:96）。
+    2. `recallAndInject`（召回内容注入被管理上下文）全仓库零调用 → `middleware.preLlmCall` 由 `engine.recall` 改为 `engine.recallAndInject`（middleware.ts:70），召回内容进入引擎、autoManage 可见。
+    3. `autoManage` 内部 L1 分支（`downgradeToL3`）只标记 `compressed:true`、**从不调 `summarizeAndCapsule`** → 产品的「LLM 概括归档为胶囊」在 `autoManage` 里是死逻辑。新增 `summarizeInactive()`（manager.ts:896）并在 `autoManage` 内调用（manager.ts:725），对相对话题锚点非活跃的旧内容真正概括成胶囊（30s 节流 + 无 LLM 时确定性回退）。
+    4. `forgetRecalled`（清理每轮召回注入的 `[recall]` 条目）零调用 → `middleware.preLlmCall` 在 `recallAndInject` 前先 `engine.forgetRecalled()`（middleware.ts:71），闭合「AI 接管上下文」循环，避免活跃窗口被历次召回无限膨胀。
+  - **诚实结论（非断点，属设计/便利 API，未接不视为 bug）**：`feedBatch` / `flush` / `newConversation` / `listCapsules` 在生产路径（MCP + middleware）无调用方——`feedBatch` 是 `feed` 批量包装、`flush` 是会话结束显式打包（autoManage 已做增量压缩，等价功能已覆盖）、`newConversation` 是会话隔离（单默认会话场景下 recall 按默认 conversation 过滤，行为合理）、`listCapsules` 仅暴露 capsuleCount 不暴露详情（次要）。如需可后续补 MCP 工具或 middleware 钩子，但非「核心逻辑未接入」。
+  - **验证**：新增 `integration-wiring.test.ts`（6 用例：autoManage 接线 / recallAndInject 接线 / 两轮压缩产出胶囊 / 单主题不压缩已知限制 / forgetRecalled 闭环清理 / 孤立 API 检测）+ `mcp/tests/server-wiring.test.ts`（3 用例：context_inject 触发 autoManage 等）；全量回归 **192 passed**（context + mcp，原 183 + 新增 9）。
 - **3.1 bench 整合**（roadmap 三.1）— **统一入口落地（部分）**
   - 新建 `bench/run.mjs` 作为唯一入口（纯 Node ESM，无需 tsx/key），支持 `--suite <bm25|niah|multihop|docqa|all>` 与 `--list`。
   - 新建 `bench/suites/`：`bench-result.mjs`（统一 `BenchResult` 类型 + Markdown/JSON 报告格式化）、`bm25.mjs`（真实可跑，复用 `search-precision.mjs` 的 `runBm25()`）、`niah.mjs`/`multihop.mjs`/`docqa.mjs`（key-gated，诚实跳过、不伪造分数）。
