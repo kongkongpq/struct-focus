@@ -1,6 +1,6 @@
-# StructAgent Context — 通用上下文中间层
+# StructFocus Context — 通用上下文中间层
 
-你运行在一个有上下文窗口限制的环境中。StructAgent 帮你管理注意力：
+你运行在一个有上下文窗口限制的环境中。StructFocus 帮你管理注意力：
 **不丢信息，只是不一直放在眼前。**
 
 ## 四层冷热架构
@@ -16,7 +16,7 @@
 
 ### 降级，不是驱逐
 
-StructAgent **从不删除信息**。四层之间只有降级流动：
+StructFocus **从不删除信息**。四层之间只有降级流动：
 
 ```
 L2 工作 ──≥20% 非活跃──→ L3 压缩（保留指针 + 摘要）
@@ -55,29 +55,18 @@ const result = await engine.recall("Redis OOM 问题"); // 语义召回
 
 ## MCP 工具清单
 
-通过 `@struct/mcp` 暴露为标准 MCP Server，**任何 MCP 兼容 Agent 零侵入接入**。
+通过 `@structfocus/mcp` 暴露为标准 MCP Server（stdio），**任何 MCP 兼容 Agent 零侵入接入**。底层仍是四层冷热 + 胶囊系统，但对外只暴露 5 个工具：
 
-### 聚焦 / 降级
-- `focus` — 聚焦文件/目录（L0 元数据 / L1 大纲 / L2 全文三级）
-- `forget` — 卸载指定文件
-- `forget:noise` — 正则清理日志/报告类噪音
+### 注入 / 召回
+- `context_inject` — 注入一条上下文（对话 / 工具输出 / 日志），type 可选 user/tool/observation
+- `context_recall` — 按自然语言语义召回历史上下文（胶囊摘要 + 相关原文片段）
 
-### 召回
-- `recall` — 检索记忆（分词匹配）
-- `recall:context` — 从磁盘加载历史胶囊（L1 概览 / L2 完整）
-- `recall:file` — 按需加载文件（L1 大纲 / L2 全文）
+### 聚焦 / 卸载
+- `context_focus` — 聚焦指定文件/目录到工作上下文（L0 元数据 / L1 符号大纲 / L2 全文）
+- `context_forget` — 忘记（卸载）指定上下文，target 为文件路径或条目 ID
 
-### 压缩 / 打包
-- `summarize:recent` — 压缩最近 N 步
-- `summarize:conversation` — 压缩指定步骤之后
-- `pack:subtask` — 子任务上下文全部打包为知识胶囊
-
-### 状态 / 审计
-- `reflect` — 上下文健康度（token/预算/聚焦/浪费/建议）
-- `stats` — 条目数、token 分布、各层占比
-- `budget` — 预算分配详情
-- `autoManage` — 引擎主动接管注意力管理
-- `getEntries` / `getLog` — 查当前 / 全部上下文条目
+### 状态
+- `context_status` — 引擎状态：累计注入/概括 token、胶囊数、活跃/归档条目数、最后概括时间
 
 ## 一条信息的完整生命周期
 
@@ -106,9 +95,9 @@ Step 20: LLM 需要回顾之前的 Redis 方案
 // Claude Desktop / 任意 MCP 宿主
 {
   "mcpServers": {
-    "struct-context": {
+    "structfocus": {
       "command": "npx",
-      "args": ["@struct/mcp-server"],
+      "args": ["-y", "@structfocus/mcp"],
       "env": {
         "STRUCT_LLM_API_KEY": "sk-xxx",
         "STRUCT_LLM_BASE_URL": "https://api.deepseek.com/v1",
