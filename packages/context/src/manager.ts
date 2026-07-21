@@ -387,6 +387,20 @@ export class ContextManager {
     });
   }
 
+  /** 注入一条 system 角色上下文（如召回注入），不伪造 user/assistant 交替 */
+  appendSystem(
+    content: string,
+    opts?: { source?: string; sourceType?: SourceType; taskRelevance?: number },
+  ): void {
+    this.appendEntry({
+      type: "system",
+      content,
+      source: opts?.source,
+      sourceType: opts?.sourceType,
+      taskRelevance: opts?.taskRelevance ?? 1,
+    });
+  }
+
   private appendEntry(
     init: {
       type: EntryType;
@@ -1867,7 +1881,7 @@ export class ContextManager {
   injectRecall(result: RecallResult): void {
     if (!result.entries.length) return;
     for (const entry of result.entries) {
-      this.appendObservation(
+      this.appendSystem(
         `[recall] ${entry.source ?? entry.entryId}\n${entry.originalContent.slice(0, 3000)}${entry.originalContent.length > 3000 ? `\n...(共 ${entry.originalContent.length} 字符)` : ""}`,
         {
           source: entry.source,
@@ -1897,7 +1911,8 @@ export class ContextManager {
     for (let i = this.entries.length - 1; i >= 0; i--) {
       const e = this.entries[i]!;
       if (e.evicted) continue;
-      if (e.type !== "observation") continue;
+      // 召回注入以 observation 或 system 角色进入上下文，统一按 [recall] 前缀清理
+      if (e.type !== "observation" && e.type !== "system") continue;
       if (!e.content.startsWith("[recall]")) continue;
       const toSave = e.originalContent ?? e.content;
       this.entries[i] = { ...e, evicted: true, evictedAt: Date.now(), externalRef: `ext://${e.id}` };

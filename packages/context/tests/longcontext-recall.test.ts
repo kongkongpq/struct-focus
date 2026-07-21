@@ -587,8 +587,9 @@ describe("buildContext placementMap", () => {
       placementMap,
     });
 
-    const userMsgs = msgs.filter((m: { role: string }) => m.role === "user");
-    const capsuleMsg = userMsgs.find((m: { content: string | null }) => m.content && m.content.includes("expand:context"));
+    // L3_compressed 胶囊召回作为 system 前缀块渲染（不再混入 user 对话流）
+    const systemMsgs = msgs.filter((m: { role: string }) => m.role === "system");
+    const capsuleMsg = systemMsgs.find((m: { content: string | null }) => m.content && m.content.includes("上下文召回"));
     expect(capsuleMsg).toBeTruthy();
     expect(capsuleMsg!.content).toContain("📦 摘要: 包含重要决策");
     expect(capsuleMsg!.content).toContain("expand:context");

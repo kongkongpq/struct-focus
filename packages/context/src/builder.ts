@@ -312,22 +312,30 @@ function buildFocused(tc: TaskContext, entries: ContextEntry[]): LLMMessage | nu
 }
 
 /** L5：历史层（按时间顺序渲染活跃条目，保持原始 user/assistant 交替结构） */
-function buildHistory(entries: ContextEntry[], placementMap?: Map<string, ContextPlacement>): LLMMessage[] {
+interface HistoryResult {
+  /** 对话流：仅 user/assistant/observation/tool/memory，保持时序交替 */
+  history: LLMMessage[];
+  /** 胶囊召回块：作为 system 前缀注入，不混入对话流，避免伪造 user/assistant 交替 */
+  recallBlocks: LLMMessage[];
+}
+function buildHistory(entries: ContextEntry[], placementMap?: Map<string, ContextPlacement>): HistoryResult {
   const ordered = [...entries].sort((a, b) => a.timestamp - b.timestamp);
-  const messages: LLMMessage[] = [];
+  const history: LLMMessage[] = [];
+  const recallBlocks: LLMMessage[] = [];
   for (const e of ordered) {
     // placementMap 优先，回退到条目自带 placement（与 manager.toMessages 一致）
     const placement = placementMap?.get(e.id) ?? e.placement;
     // L4_raw：不渲染
     if (placement?.target === "L4_raw") continue;
-    // L3_compressed：替换为胶囊摘要
+    // L3_compressed：胶囊召回 → 作为 system 前缀块，不破坏对话流交替
     if (placement?.target === "L3_compressed") {
       const summary =
         placement.capsuleSummary ??
         (e.compressed && e.compressedContent ? e.compressedContent : e.content.slice(0, 200));
-      messages.push({
-        role: "user",
-        content: `📦 [胶囊] ${summary}\n调用 expand:context("${e.id}") 展开完整记录`,
+      const capsuleId = placement.capsuleId ?? e.id;
+      recallBlocks.push({
+        role: "system",
+        content: `[上下文召回: ${capsuleId}]\n${summary}\n调用 expand:context("${e.id}") 展开完整记录`,
       });
       continue;
     }
@@ -339,11 +347,11 @@ function buildHistory(entries: ContextEntry[], placementMap?: Map<string, Contex
         : e.type === "memory"
           ? "user"
           : ROLE_BY_TYPE[e.type] ?? "user";
-    // 保留原始类型标记但不破坏角色交替：user/assistant 不加前缀，其他加轻量标记
-    const prefix = e.type === "user" || e.type === "assistant" ? "" : tagFor(e);
-    messages.push({ role, content: `${prefix}${text}` });
+    // 保留原始类型标记但不破坏角色交替：user/assistant/system 不加前缀，其他加轻量标记
+    const prefix = e.type === "user" || e.type === "assistant" || e.type === "system" ? "" : tagFor(e);
+    history.push({ role, content: `${prefix}${text}` });
   }
-  return messages;
+  return { history, recallBlocks };
 }
 
 /** L6：预算检查层（高占用告警） */
@@ -380,7 +388,10 @@ export function buildContext(input: BuildContextInput): LLMMessage[] {
   if (task) messages.push(task);
   const focused = input.taskContext ? buildFocused(input.taskContext, entries) : null;
   if (focused) messages.push(focused);
-  messages.push(...buildHistory(entries, input.placementMap));
+  const { history, recallBlocks } = buildHistory(entries, input.placementMap);
+  // 胶囊召回作为 system 前缀注入，置于历史对话流之前
+  for (const b of recallBlocks) messages.push(b);
+  messages.push(...history);
   const budget = buildBudget(input.usePercent);
   if (budget) messages.push(budget);
   return messages;

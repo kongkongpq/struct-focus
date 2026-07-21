@@ -470,7 +470,7 @@ export class LongContextEngine {
   ): Promise<RecallResult> {
     const result = await this.recall(query, opts);
     if (result.injectText && !result.injectText.includes("未找到")) {
-      this.cm.appendObservation(result.injectText, {
+      this.cm.appendSystem(`[recall] ${result.injectText}`, {
         source: `recall:${query.slice(0, 30)}`,
         sourceType: "tool_output",
         taskRelevance: 0.5,

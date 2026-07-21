@@ -452,5 +452,12 @@ npx tsx bench/run.ts --suite xxx
   - `ContentStore`: `StoredContent`/`IndexEntry`/`SearchOptions` 加 `conversationId`；`search()` 支持按对话过滤召回；10 处 `store.save` 全链路打标。
   - `LongContextEngine.newConversation(id?)` 透传；`recall()` 默认按 `getCurrentConversationId()` 过滤，可用 `opts.conversationId` 覆盖。
   - 新增 `conversation-isolation.test.ts`(4)：切换打标 / toMessages 互不污染 / search 按对话过滤 / engine.recall 默认隔离。
-  - 总用例 **179**（context 163 + mcp 16）。
-- **待办组**：1.2 toMessages 时序 / 2.3 BM25 精度 bench / 1.3 多跳 QA（需 GLM-4 key）/ 1.4 DocQA（需 key）/ 3.1 bench 整合（run.ts 仅 NIAH，缺 multihop/docqa/bm25 suite）/ 3.2 报告标准化 / 4.1 英文 README / 4.2 Gitee CI / 4.3 CONTRIBUTING / 1.1 注⑤：LoCoMo bench 脚本按对话 `newConversation` 接线（见下）。
+- **1.2 toMessages 时序保持**（roadmap 一.2）— **已完成**
+  - `buildHistory` 拆分 `history` 流与 `recallBlocks`：L3_compressed 胶囊召回不再以 `role:user` 内联，改为 `role:system` 的 `[上下文召回: <capsuleId>]` 前缀块，置于历史对话流之前，不破坏 user/assistant 交替。
+  - `toMessages` 对纯 user/assistant 对话保持严格角色交替（已验证 10 轮 → 10 对 user/assistant，无内联 `[observation]`/`[recall]` 伪造标记）。
+  - 召回注入（item 3）：`injectRecall` 与 `LongContextEngine.recallAndInject` 改为 `appendSystem`（`role:system`，内容带 `[recall]` 前缀），不再伪造 user/assistant；新增 `ContextManager.appendSystem`；`forgetScoped` 扩展为同时清理 `observation`/`system` 类型的 `[recall]` 条目。
+  - `buildHistory` 对 `system` 类型条目不加 `[tool_output]` 等前缀标记。
+  - 新增 `tomessages-timeline.test.ts`(4)：10 轮交替 / 首末角色 / 胶囊 system 前缀 / 召回注入为 system 且 forgetScoped 可清理。
+  - 同步修正 `longcontext-recall.test.ts` 中胶囊摘要断言（user→system 块）。
+  - 总用例 **183**（context 167 + mcp 16）。
+- **待办组**：2.3 BM25 精度 bench / 1.3 多跳 QA（需 GLM-4 key）/ 1.4 DocQA（需 key）/ 3.1 bench 整合（run.ts 仅 NIAH，缺 multihop/docqa/bm25 suite）/ 3.2 报告标准化 / 4.1 英文 README / 4.2 Gitee CI / 4.3 CONTRIBUTING。
