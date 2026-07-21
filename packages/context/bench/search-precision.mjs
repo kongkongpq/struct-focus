@@ -143,8 +143,8 @@ async function multiRelevantScenario() {
   return { q, relCount: REL, bm25R5, bm25R10, incR5, incR10, passRecall10 };
 }
 
-// ─── 主流程 ───────────────────────────────────────────
-async function main() {
+// ─── 主计算（可复用，供 bench/suites/bm25.mjs 调用） ──
+export async function runBm25() {
   const root = mkdtempSync(join(tmpdir(), "sf-bm25-"));
   const cm = new ContextManager({ maxWindow: 1e9, storeRoot: join(root, "cs"), capsuleRoot: join(root, "cap") });
   const store = cm.getStore();
@@ -188,7 +188,20 @@ async function main() {
     incPExact: incPExact / exactN, incRExact: incRExact / exactN, exactN,
   };
 
-  // 控制台表格
+  const passRecall = agg.bm25RExact >= 0.7;
+  const passPrecision = agg.bm25PExact >= agg.incPExact - 1e-9;
+
+  // 场景 B：多相关条目召回
+  const scenarioB = await multiRelevantScenario();
+
+  return { rows, agg, passRecall, passPrecision, scenarioB };
+}
+
+// ─── 独立运行入口（node search-precision.mjs） ────────
+async function main() {
+  const { rows, agg, passRecall, passPrecision, scenarioB } = await runBm25();
+
+  const n = rows.length;
   console.log("\n查询                           模糊  BM25 P@5  BM25 R@5  inc P@5  inc R@5");
   console.log("-".repeat(78));
   for (const r of rows) {
@@ -199,22 +212,26 @@ async function main() {
   }
   console.log("-".repeat(78));
   console.log(`全集(${n}):   BM25 P@5=${agg.bm25P.toFixed(3)} R@5=${agg.bm25R.toFixed(3)} | includes P@5=${agg.incP.toFixed(3)} R@5=${agg.incR.toFixed(3)}`);
-  console.log(`精确(${exactN}): BM25 P@5=${agg.bm25PExact.toFixed(3)} R@5=${agg.bm25RExact.toFixed(3)} | includes P@5=${agg.incPExact.toFixed(3)} R@5=${agg.incRExact.toFixed(3)}`);
-
-  const passRecall = agg.bm25RExact >= 0.7;
-  const passPrecision = agg.bm25PExact >= agg.incPExact - 1e-9;
+  console.log(`精确(${agg.exactN}): BM25 P@5=${agg.bm25PExact.toFixed(3)} R@5=${agg.bm25RExact.toFixed(3)} | includes P@5=${agg.incPExact.toFixed(3)} R@5=${agg.incRExact.toFixed(3)}`);
   console.log(`\n合格标准: BM25 R@5(精确)≥0.7 -> ${passRecall ? "PASS" : "FAIL"} | BM25 P@5(精确)≥includes -> ${passPrecision ? "PASS" : "FAIL"}`);
-
-  // 场景 B：多相关条目召回
-  const scenarioB = await multiRelevantScenario();
   console.log(`\n场景B(10 相关条目): BM25 R@5=${scenarioB.bm25R5.toFixed(3)} R@10=${scenarioB.bm25R10.toFixed(3)} | includes R@5=${scenarioB.incR5.toFixed(3)} R@10=${scenarioB.incR10.toFixed(3)}`);
   console.log(`场景B 合格(Recall@10≥0.7, 忠实实现 roadmap 字面不可达的 Recall@5≥0.7): ${scenarioB.passRecall10 ? "PASS" : "FAIL"}`);
 
-  // 写报告
   const md = buildReport(rows, agg, passRecall, passPrecision, scenarioB);
   const outPath = join(__dir, "..", "..", "..", "docs", "benchmarks", "bm25-precision.md");
   writeFileSync(outPath, md, "utf-8");
   console.log(`\n报告已写入: ${outPath}`);
+}
+
+/**
+ * 写出规范 BM25 报告到 docs/benchmarks/bm25-precision.md（供 bench/suites/bm25.mjs 复用）。
+ * @param {{rows:any,agg:any,passRecall:boolean,passPrecision:boolean,scenarioB:any}} data runBm25() 的返回值
+ */
+export function writeBm25Report(data) {
+  const md = buildReport(data.rows, data.agg, data.passRecall, data.passPrecision, data.scenarioB);
+  const outPath = join(__dir, "..", "..", "..", "docs", "benchmarks", "bm25-precision.md");
+  writeFileSync(outPath, md, "utf-8");
+  return outPath;
 }
 
 function buildReport(rows, agg, passRecall, passPrecision, scenarioB) {
@@ -264,4 +281,6 @@ function buildReport(rows, agg, passRecall, passPrecision, scenarioB) {
   return md;
 }
 
-await main();
+// 仅当作为主模块直接运行（node search-precision.mjs）时执行；被 import 时不自跑。
+const __isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (__isMain) await main();

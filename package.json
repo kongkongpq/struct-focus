@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "bench:bm25": "node packages/context/bench/search-precision.mjs",
+    "bench": "node packages/context/bench/run.mjs --suite all",
+    "bench:bm25": "node packages/context/bench/run.mjs --suite bm25",
+    "bench:smoke": "node packages/context/bench/run.mjs --suite bm25",
     "clean": "pnpm -r run clean && rimraf node_modules"
   },
   "devDependencies": {

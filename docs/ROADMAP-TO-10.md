@@ -469,6 +469,18 @@ npx tsx bench/run.ts --suite xxx
   - 诚实结论：4 个同义查询中 2 个（主从复制拓扑、外部知识库问答）零词面重叠致 BM25/includes 双失效；另 2 个 BM25 借子词（调度/淘汰策略）仍可命中而 includes 失败 → BM25 OR 式打分比 includes-AND 更鲁棒，但二者均无语义能力（hybrid 接口已预留）。
   - **场景 B（本轮新增）**：10 条同主题相关 + 90 条干扰，验证多相关召回。⚠️ 披露：roadmap 原文合格标准「BM25 Recall@5 ≥ 0.7（10 个相关条目，top-5 至少覆盖 7 个）」**数学上不可能**——topK=5 最多覆盖 5/10=0.5。忠实实现为 **Recall@10 ≥ 0.7**，实测 BM25 Recall@10 = 1.000 → PASS。
   - 报告输出至 `docs/benchmarks/bm25-precision.md`。
+- **3.1 bench 整合**（roadmap 三.1）— **统一入口落地（部分）**
+  - 新建 `bench/run.mjs` 作为唯一入口（纯 Node ESM，无需 tsx/key），支持 `--suite <bm25|niah|multihop|docqa|all>` 与 `--list`。
+  - 新建 `bench/suites/`：`bench-result.mjs`（统一 `BenchResult` 类型 + Markdown/JSON 报告格式化）、`bm25.mjs`（真实可跑，复用 `search-precision.mjs` 的 `runBm25()`）、`niah.mjs`/`multihop.mjs`/`docqa.mjs`（key-gated，诚实跳过、不伪造分数）。
+  - 重构 `search-precision.mjs`：抽取 `export async function runBm25()` 返回结构化数据；保留 `node search-precision.mjs` 独立运行（经 `import.meta` 判断主模块），与 `bench:bm25` 脚本解耦。
+  - `package.json` 脚本：`bench` / `bench:bm25` / `bench:smoke` 均指向 `run.mjs --suite bm25`（`bench:smoke` 供 4.2 CI 用）。
+  - **验证**：`node bench/run.mjs --suite all` 本地实跑 → BM25 ✅ OK（精确 P@5/R@5=1.000 ≥ includes，场景B Recall@10=1.000 PASS），niah/multihop/docqa ⏭️ SKIPPED，统一报告写入 `docs/benchmarks/_last-run.md` + `_last-run.json`。
+  - **诚实披露 / 未达标项**：
+    - roadmap 合格标准「`npx tsx bench/run.ts --suite niah` 跑通」**当前不满足**——本机未安装 tsx，且 `bench/harness.ts` 未被 `tsc -b` 编译进 dist（`run.ts` 依赖的 `./harness.js` 不存在），NIAH 等无法运行；故改用纯 `.mjs` 入口（开箱即用），niah/multihop/docqa 保持 key-gated。后续接 key 时需：① `pnpm add -D tsx` 或将 harness 纳入 `tsconfig` include 并产出 `harness.js`；② 配置 `LLM_API_KEY`；③ 在 suite 内调用 `runNIAHSingle` 等并映射为 `BenchResult`。
+    - roadmap「脚本数 13 → ≤8」**暂缓**：保留 `harness.ts`/`run.ts`/`hardcore*.ts`/`llm-harness.ts` 等 LLM harness 脚本（1.3/1.4 接入时需要），未删除；新增 `suites/` 与 `run.mjs` 为活跃入口。待 key 接入并确认 harness 可编译后再做清理/合并。
+- **3.2 报告标准化**（roadmap 三.2）— **部分**
+  - 已建 `docs/benchmarks/README.md` 索引 + `bm25-precision.md`；统一 `BenchResult` 格式已定义（`{suite,model,date,results:{BL,CM}}`），由 `run.mjs` 输出 `_last-run.md/json`。
+  - multihop/docqa/niah 报告待对应 suite 接 key 后补齐；BM25 报告已可导航。
 - **4.1 英文 README**（roadmap 四.1）— **已完成**
   - 新建 `README_EN.md`：覆盖 one-liner / Why / 30-sec Quickstart / Architecture(ASCII 四层冷热图) / 8 MCP 工具表（按实际代码为 8 个，非 roadmap 草稿写的 5 个）/ Benchmarks 表 + 链接 / Install&Build / License。
   - `README.md` 顶部加英文版指针，中文版保留为主文档。
@@ -476,6 +488,6 @@ npx tsx bench/run.ts --suite xxx
   - 扩充项目结构 ASCII 树（含 bench/ docs/ tests/）；补「Local Development」「Unit Test Conventions」（隔离 storeRoot、单 fork vitest 命令）；补 fork 分支/commit 规范；补 5 个 Good First Issues。
 - **待办组 / 挂起**：
   - 1.3 多跳 QA、1.4 DocQA：需 GLM-4 key，代码可建但本地无法出分，挂起。
-  - 3.1 bench 整合：run.ts 仅 NIAH，bm25 已独立可跑（`pnpm bench:bm25`），multihop/docqa 待 key；可后续把 bm25 接进 run.ts 的 smoke 集合。
-  - 4.2 Gitee CI：按你先前指示「先空着，等同步后再改」，延后。
-  - 3.2 报告标准化：已建 `docs/benchmarks/` 索引 + bm25 报告；multihop/docqa 报告待 key 后补齐。
+  - 3.1 bench 整合：统一入口 `run.mjs` + BM25 suite 已落地并验证（无需 key 可跑，BM25 PASS）；niah/multihop/docqa 仍 key-gated（缺 LLM key + harness 未编译），未交付 `tsx` 跑通版（roadmap 字面合格标准暂不满足，已诚实记录）。
+  - 3.2 报告标准化：已建索引 + BM25 报告 + 统一 BenchResult 格式（`_last-run.md/json`）；multihop/docqa/niah 报告待 key。
+  - 4.2 Gitee CI：按你先前指示「先空着，等同步后再改」，延后（入口 `bench:smoke` 已就位）。

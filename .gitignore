@@ -19,4 +19,5 @@ Thumbs.db
 # benchmark 结果产物（可本地复现，不提交）
 packages/context/benchmark/results/
 *.csv
+docs/benchmarks/_last-run.*
 
