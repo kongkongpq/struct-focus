@@ -1,9 +1,9 @@
-// MCP Server 测试 — 直接驱动 JSON-RPC 协议处理器，验证 6 个工具的握手与调用
+// MCP Server 测试 — 直接驱动 JSON-RPC 协议处理器，验证 8 个工具的握手与调用
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { handle } from "../src/index.js";
+import { handle, engine } from "../src/index.js";
 
 let tmpDir: string;
 
@@ -31,7 +31,7 @@ describe("MCP JSON-RPC handshake", () => {
     expect(res.id).toBe(2);
   });
 
-  it("tools/list 暴露恰好 6 个工具", async () => {
+  it("tools/list 暴露恰好 8 个工具", async () => {
     const res: any = await handle({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} });
     const names = res.result.tools.map((t: any) => t.name);
     expect(names).toEqual([
@@ -41,8 +41,10 @@ describe("MCP JSON-RPC handshake", () => {
       "context_forget",
       "context_focus",
       "context_set_policy",
+      "context_stats",
+      "context_search",
     ]);
-    expect(names.length).toBe(6);
+    expect(names.length).toBe(8);
   });
 
   it("未知方法返回 method not found", async () => {
@@ -56,7 +58,7 @@ describe("MCP JSON-RPC handshake", () => {
   });
 });
 
-describe("MCP 工具调用（6 个工具）", () => {
+describe("MCP 工具调用（8 个工具）", () => {
   it("context_inject + context_status 注入并可查状态", async () => {
     const inject: any = await handle({
       jsonrpc: "2.0", id: 10, method: "tools/call",
@@ -136,6 +138,59 @@ describe("MCP 工具调用（6 个工具）", () => {
       jsonrpc: "2.0", id: 22, method: "tools/call",
       params: { name: "context_set_policy", arguments: { conservative: false, emergencyThreshold: 0.85 } },
     });
+  });
+
+  it("context_stats 返回精简状态（含磁盘/LLM/emergency）", async () => {
+    await handle({
+      jsonrpc: "2.0", id: 30, method: "tools/call",
+      params: { name: "context_inject", arguments: { content: "用户：调研 LLM 上下文压缩方案", type: "user" } },
+    });
+    const res: any = await handle({
+      jsonrpc: "2.0", id: 31, method: "tools/call",
+      params: { name: "context_stats", arguments: {} },
+    });
+    const report = JSON.parse(res.result.content[0].text);
+    expect(typeof report.totalFed).toBe("number");
+    expect(typeof report.capsuleCount).toBe("number");
+    expect(typeof report.activeEntries).toBe("number");
+    expect(typeof report.diskMB).toBe("number");
+    expect(typeof report.diskMaxMB).toBe("number");
+    expect(typeof report.llmStatus).toBe("string");
+    expect(typeof report.emergencyThreshold).toBe("number");
+  });
+
+  it("context_search 无匹配返回友好提示", async () => {
+    const res: any = await handle({
+      jsonrpc: "2.0", id: 32, method: "tools/call",
+      params: { name: "context_search", arguments: { query: "完全不存在的罕见词条xyz" } },
+    });
+    expect(res.result.content[0].text).toContain("未找到");
+  });
+
+  it("context_search 命中 ContentStore 历史原文", async () => {
+    // 直接灌入一条被落盘的历史原文（模拟 evict/truncate 后的 ContentStore 条目）
+    await engine.getStore().save({
+      entryId: "search-demo-1",
+      originalContent: "Redis OOM 排查：maxmemory 配得太小，且没设淘汰策略，导致写满后拒绝写入。",
+      originalTokenCount: 30,
+      savedAt: Date.now(),
+      reason: "truncate",
+      source: "redis-ops.md",
+    });
+    const res: any = await handle({
+      jsonrpc: "2.0", id: 34, method: "tools/call",
+      params: { name: "context_search", arguments: { query: "Redis OOM maxmemory" } },
+    });
+    expect(res.result.content[0].text).toContain("Redis OOM");
+    expect(res.result.content[0].text).toContain("redis-ops.md");
+  });
+
+  it("context_search query 为空返回错误", async () => {
+    const res: any = await handle({
+      jsonrpc: "2.0", id: 33, method: "tools/call",
+      params: { name: "context_search", arguments: { query: "" } },
+    });
+    expect(res.result.content[0].text).toContain("error");
   });
 
   it("未知工具返回 -32603 错误", async () => {

@@ -55,7 +55,7 @@ const result = await engine.recall("Redis OOM 问题"); // 语义召回
 
 ## MCP 工具清单
 
-通过 `@structfocus/mcp` 暴露为标准 MCP Server（stdio），**任何 MCP 兼容 Agent 零侵入接入**。底层仍是四层冷热 + 胶囊系统，但对外只暴露 6 个工具：
+通过 `@structfocus/mcp` 暴露为标准 MCP Server（stdio），**任何 MCP 兼容 Agent 零侵入接入**。底层仍是四层冷热 + 胶囊系统，但对外只暴露 8 个工具：
 
 ### 注入 / 召回
 - `context_inject` — 注入一条上下文（对话 / 工具输出 / 日志），type 可选 user/tool/observation
@@ -66,7 +66,9 @@ const result = await engine.recall("Redis OOM 问题"); // 语义召回
 - `context_forget` — 忘记（卸载）指定上下文，target 为文件路径或条目 ID
 
 ### 状态
-- `context_status` — 引擎状态：累计注入/概括 token、胶囊数、活跃/归档条目数、最后概括时间、当前策略
+- `context_status` — 引擎完整状态：累计注入/概括 token、胶囊数、活跃/归档条目数、磁盘占用、LLM 健康、当前策略
+- `context_stats` — 精简状态速览（更紧凑）
+- `context_search` — 在历史原文（ContentStore）中按关键词全文检索
 - `context_set_policy` — 热更新管理策略（如 `{ conservative: true }` 开启保守模式，emergency 抬到 0.97）
 
 ## 一条信息的完整生命周期

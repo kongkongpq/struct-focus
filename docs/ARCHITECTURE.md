@@ -32,7 +32,7 @@ NIAH（针在草堆）基准见 `packages/context/bench/hardcore.ts`：20 格硬
 | 包 | 角色 |
 |:---|:---|
 | `@structfocus/context` | **核心引擎**：长上下文管理引擎（L1–L4 四层冷热 / 胶囊 / 指针 / 预算桶 / 语义召回） |
-| `@structfocus/mcp` | 上下文引擎的 **MCP Server**（stdio 传输，零依赖实现 MCP 协议，暴露 6 个工具） |
+| `@structfocus/mcp` | 上下文引擎的 **MCP Server**（stdio 传输，零依赖实现 MCP 协议，暴露 8 个工具） |
 
 ---
 
@@ -47,10 +47,10 @@ NIAH（针在草堆）基准见 `packages/context/bench/hardcore.ts`：20 格硬
                 ▼
 ┌─────────────────────────────────────┐
 │  Layer 2 — @structfocus/mcp         │   MCP Server，零依赖实现协议
-│  6 个工具：                         │   context_inject / context_recall / context_status
+│  8 个工具：                         │   context_inject / context_recall / context_status
 │   context_forget  context_focus     │   context_set_policy（含 conservative 保守模式）
-│   context_status  context_forget    │
-│   context_focus                     │
+│   context_stats  context_search     │   context_status / context_stats 查状态
+│   context_focus  context_set_policy  │   context_search 查历史原文
 └───────────────┬─────────────────────┘
                 │ 调用
                 ▼
@@ -70,16 +70,18 @@ NIAH（针在草堆）基准见 `packages/context/bench/hardcore.ts`：20 格硬
 
 ---
 
-## 4. MCP 工具契约（6 个）
+## 4. MCP 工具契约（8 个）
 
 | 工具 | 入参 | 行为 |
 |:---|:---|:---|
 | `context_inject` | `content`, `source?`, `type?` | 注入一条上下文（user/tool/observation） |
 | `context_recall` | `query`, `topK?` | 自然语言语义召回（胶囊摘要 + 相关原文片段） |
-| `context_status` | — | 引擎状态：累计注入/概括 token、胶囊数、活跃/归档条目、最后概括时间、当前策略 |
+| `context_status` | — | 引擎完整状态：token/胶囊数/活跃归档条目、storeStats（磁盘占用）、llmStatus（压缩健康）、policy（含 effectiveEmergencyThreshold） |
 | `context_forget` | `target` | 忘记（卸载）指定上下文：文件路径或条目 ID |
 | `context_focus` | `path`, `symbols?`, `level?` | 聚焦文件/目录到工作上下文（L0 元数据 / L1 符号大纲 / L2 全文） |
 | `context_set_policy` | `conservative?`, `softThreshold?`, `hardThreshold?`, `emergencyThreshold?`, `topicDistance?`, `maxChunkBeforeManage?`, `userOverride?` | 热更新管理策略（如 `{ conservative: true }` 开启保守模式，emergency 抬到 0.97） |
+| `context_stats` | — | 精简状态速览：累计注入/概括、胶囊数、活跃/归档条目、磁盘占用、LLM 健康、当前 emergency 阈值 |
+| `context_search` | `query`, `topK?` | 在 ContentStore 历史原文中按关键词全文检索（精确找某段原文，而非语义召回） |
 
 接入示例（`mcp.json`，三行搞定）：
 
@@ -159,7 +161,7 @@ system → git → task → focused → history → budget
 两种接入方式：
 
 **A. 作为 MCP Server（推荐，零框架改造）**
-任意支持 MCP 的客户端在 `mcp.json` 里登记 `struct-context-mcp`，即可调用上述 6 个工具，无需任何框架源码改动。
+任意支持 MCP 的客户端在 `mcp.json` 里登记 `struct-context-mcp`，即可调用上述 8 个工具，无需任何框架源码改动。
 
 **B. 作为代码级中间件（TypeScript 宿主）**
 任何支持 pre/post LLM hook 的框架，实现 `ContextMiddleware` 即可接入，无需引入框架依赖：

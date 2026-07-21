@@ -74,10 +74,12 @@ STRUCT_LLM_MODEL=qwen2:7b
 |:---|:---|
 | `context_inject` | 注入一条上下文（对话 / 工具输出 / 日志） |
 | `context_recall` | 按自然语言语义召回历史上下文 |
-| `context_status` | 查看引擎状态（token / 胶囊数 / 活跃条目 / 当前策略） |
+| `context_status` | 查看引擎完整状态（token / 胶囊数 / 活跃条目 / 磁盘占用 / LLM 健康 / 当前策略） |
 | `context_forget` | 忘记（卸载）指定上下文 |
 | `context_focus` | 聚焦指定文件/目录到工作上下文 |
 | `context_set_policy` | 热更新管理策略（如 `{ conservative: true }` 开启保守模式） |
+| `context_stats` | 精简状态速览（更紧凑，适合每次调用后扫一眼） |
+| `context_search` | 在历史原文（ContentStore）中按关键词全文检索 |
 
 ## 快速验证（30 秒）
 

@@ -1,12 +1,14 @@
 // @structfocus/mcp — StructFocus 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）
 //
-// 暴露「上下文管理」原语为 6 个 MCP Tools（由任意 MCP 客户端接入）：
+// 暴露「上下文管理」原语为 8 个 MCP Tools（由任意 MCP 客户端接入）：
 //   - context_inject  注入一条上下文（喂给引擎）
 //   - context_recall  语义召回历史上下文
-//   - context_status  查看引擎状态（统计/胶囊数/占用/当前策略）
+//   - context_status  查看引擎完整状态（统计/胶囊数/磁盘占用/LLM 健康/当前策略）
 //   - context_forget  忘记（卸载）指定上下文
 //   - context_focus   聚焦指定文件/目录
 //   - context_set_policy  热更新管理策略（含 conservative 保守模式）
+//   - context_stats  精简状态速览（更紧凑）
+//   - context_search  在 ContentStore 历史原文中按关键词全文检索
 //
 // 不依赖 @modelcontextprotocol/sdk，直接实现 MCP 的 JSON-RPC over stdio 协议，
 // 以便作为「上下文中间层」被 Claude Code / Cursor / Cline / 任意支持 MCP 的 Agent 宿主接入。
@@ -101,6 +103,23 @@ const TOOLS: McpTool[] = [
       },
     },
   },
+  {
+    name: "context_stats",
+    description: "精简状态速览：累计注入/概括、胶囊数、活跃/归档条目、磁盘占用、LLM 健康、当前 emergency 阈值。比 context_status 更紧凑。",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "context_search",
+    description: "在 ContentStore（被截断/驱逐/落盘的历史原文）中按关键词全文检索。适合「精确找某段历史原文」而非语义召回。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "检索关键词（支持中英文，自动分词）" },
+        topK: { type: "number", description: "最多返回条数（默认 5）" },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 // ── LLM 配置（压缩用，不配也能跑——走确定性回退） ─────────
@@ -173,7 +192,7 @@ const engineOptions: LongContextEngineOptions = {
   llmHealthCheck: llmCfg ? createLlmHealthCheck(llmCfg) : undefined,
   logger: (msg: string) => console.error(`[struct-context] ${msg}`),
 };
-const engine = new LongContextEngine(engineOptions);
+export const engine = new LongContextEngine(engineOptions);
 
 
 
@@ -284,6 +303,41 @@ async function callTool(
         `✓ 策略已更新。conservative=${p.conservative} effectiveEmergency=${effectiveEmergencyThreshold(p)} ` +
         `emergency=${p.emergencyThreshold} hard=${p.hardThreshold} soft=${p.softThreshold} userOverride=${p.userOverride}`,
       );
+    }
+    case "context_stats": {
+      const stats = await engine.getStats();
+      const policy = engine.getManagementPolicy();
+      const report = {
+        totalFed: stats.totalFed,
+        totalSummarized: stats.totalSummarized,
+        capsuleCount: stats.capsuleCount,
+        activeEntries: stats.activeEntries,
+        storedEntries: stats.storedEntries,
+        diskMB: stats.storeStats.maxBytes > 0
+          ? Math.round((stats.storeStats.usedBytes / 1024 / 1024) * 100) / 100
+          : 0,
+        diskMaxMB: stats.storeStats.maxBytes > 0
+          ? Math.round((stats.storeStats.maxBytes / 1024 / 1024) * 100) / 100
+          : 0,
+        llmStatus: stats.llmStatus.status,
+        emergencyThreshold: effectiveEmergencyThreshold(policy),
+      };
+      return textResult(JSON.stringify(report, null, 2));
+    }
+    case "context_search": {
+      const query = String(args.query ?? "");
+      if (!query) return textResult("error: query 不能为空");
+      const topK = typeof args.topK === "number" ? Math.max(1, Math.min(args.topK, 20)) : 5;
+      const results = await engine.getStore().search(query, { mode: "hybrid", topK });
+      if (results.length === 0) {
+        return textResult(`未找到匹配「${query}」的历史原文条目。`);
+      }
+      const lines = results.map((r, i) => {
+        const src = r.entry.source ?? "(未知来源)";
+        const score = (r.score * 100).toFixed(0);
+        return `#${i + 1} [${score}%] ${src}\n${r.snippet}`;
+      });
+      return textResult(`找到 ${results.length} 条匹配「${query}」：\n\n${lines.join("\n\n")}`);
     }
     default:
       throw new Error(`unknown tool: ${name}`);

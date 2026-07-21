@@ -13,7 +13,7 @@
 - **胶囊数量上限**：`LongContextEngine` 新增 `capsuleMaxCount`（默认 50，`STRUCT_CAPSULE_MAX_COUNT`，0=不限制），`summarize` 后按 `createdAt` 踢最旧胶囊并物理删除 JSON（防 `listCapsules` / L1 渲染在千级胶囊时变慢、占大量 token）。
 - **ContentStore 磁盘 LRU**：`ContentStore` 新增 `maybeCleanup()` / `dirSize()` / `getStorageStats()` / `enforceStorageLimit()`，`save()` 后异步按 `savedAt` 淘汰最旧条目，回到 `STRUCT_STORE_MAX_MB`（默认 512MB，0=无限）的 90% 以内。
 - **LLM 压缩失败告警**：`LongContextEngine` 新增 `getLlmStatus()` / `checkLlmHealth()`，三级状态 `unknown / ok / degraded / failed`；`llmCall` 包裹失败计数，首次失败 `logger.warn`；MCP 启动时异步 ping `/models` 健康检查。失败时压缩自动降级为本地确定性摘要，不阻断主流程。
-- **MCP 工具补齐**：新增 `context_set_policy`（热更新管理策略）。`context_status` 现返回 `storeStats`（磁盘占用）、`llmStatus`（压缩健康）、`policy`（含 `effectiveEmergencyThreshold`）。
+- **MCP 工具补齐**：新增 `context_set_policy`（热更新管理策略）、`context_stats`（精简状态速览）、`context_search`（ContentStore 历史原文全文检索）。`context_status` 现返回 `storeStats`（磁盘占用）、`llmStatus`（压缩健康）、`policy`（含 `effectiveEmergencyThreshold`）。
 - **Gitee CI/CD**：`.gitee/workflows/ci.yml` 在 push/PR 到 main 时自动 typecheck → build → test → `mechanics.mjs` 机制验证。
 
 ### 修复
@@ -22,7 +22,7 @@
 
 ### 变更
 - **发布包拆分**：移除过时 Electron 外壳 `packages/app`，仓库现仅含 `@structfocus/context` 与 `@structfocus/mcp` 两个包。
-- **MCP 工具数 5 → 6**（新增 `context_set_policy`）。
+- **MCP 工具数 5 → 8**（新增 `context_set_policy` / `context_stats` / `context_search`）。
 - 版本号统一升至 `0.2.0`。
 
 ## [0.1.0] - 2026-07-19
