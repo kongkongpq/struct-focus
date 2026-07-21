@@ -467,4 +467,13 @@ npx tsx bench/run.ts --suite xxx
   - 结果：**精确查询 BM25 P@5=R@5=1.000，≥ includes（1.000）**；全集 BM25 0.900 / includes 0.800。合格标准双 PASS。
   - 诚实结论：4 个同义查询中 2 个（主从复制拓扑、外部知识库问答）零词面重叠致 BM25/includes 双失效；另 2 个 BM25 借子词（调度/淘汰策略）仍可命中而 includes 失败 → BM25 OR 式打分比 includes-AND 更鲁棒，但二者均无语义能力（hybrid 接口已预留）。
   - 报告输出至 `docs/benchmarks/bm25-precision.md`。
-- **待办组**：1.3 多跳 QA（需 GLM-4 key）/ 1.4 DocQA（需 key）/ 3.1 bench 整合（run.ts 仅 NIAH，缺 multihop/docqa/bm25 suite）/ 3.2 报告标准化（benchmarks 索引 + 多报告）/ 4.1 英文 README / 4.2 Gitee CI / 4.3 CONTRIBUTING。
+- **4.1 英文 README**（roadmap 四.1）— **已完成**
+  - 新建 `README_EN.md`：覆盖 one-liner / Why / 30-sec Quickstart / Architecture(ASCII 四层冷热图) / 8 MCP 工具表（按实际代码为 8 个，非 roadmap 草稿写的 5 个）/ Benchmarks 表 + 链接 / Install&Build / License。
+  - `README.md` 顶部加英文版指针，中文版保留为主文档。
+- **4.3 CONTRIBUTING.md**（roadmap 四.3）— **已完成**
+  - 扩充项目结构 ASCII 树（含 bench/ docs/ tests/）；补「Local Development」「Unit Test Conventions」（隔离 storeRoot、单 fork vitest 命令）；补 fork 分支/commit 规范；补 5 个 Good First Issues。
+- **待办组 / 挂起**：
+  - 1.3 多跳 QA、1.4 DocQA：需 GLM-4 key，代码可建但本地无法出分，挂起。
+  - 3.1 bench 整合：run.ts 仅 NIAH，bm25 已独立可跑（`pnpm bench:bm25`），multihop/docqa 待 key；可后续把 bm25 接进 run.ts 的 smoke 集合。
+  - 4.2 Gitee CI：按你先前指示「先空着，等同步后再改」，延后。
+  - 3.2 报告标准化：已建 `docs/benchmarks/` 索引 + bm25 报告；multihop/docqa 报告待 key 后补齐。

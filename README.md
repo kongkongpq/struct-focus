@@ -1,5 +1,7 @@
 # StructFocus
 
+> 中文文档（主）。English version: [README_EN.md](./README_EN.md)
+
 > **MCP 上下文管理（Context-as-a-Tool）** —— 把长上下文注意力管理做成一个 MCP Server，让任意 Agent 宿主（Claude Code / Cursor / Cline）三行接入。
 >
 > LLM 上下文注意力管理。≈ MemGPT/Letta 的上下文部分，减掉 agent 框架，加社区标准 benchmark。
