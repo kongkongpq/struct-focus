@@ -53,8 +53,26 @@ export interface LongContextEngineOptions {
   capsuleMaxCount?: number;
   /** 磁盘存储上限（MB），0 表示不限制；默认 512，可用 STRUCT_STORE_MAX_MB 覆盖 */
   storeMaxMB?: number;
+  /** LLM 健康检查（启动期 ping，可选）。返回 true=可达 */
+  llmHealthCheck?: () => Promise<boolean>;
   /** 日志函数 */
   logger?: (msg: string) => void;
+}
+
+/** LLM 压缩调用健康状态（三级：ok / degraded / failed） */
+export interface LlmStatus {
+  /** 是否配置了 LLM 调用 */
+  configured: boolean;
+  /** 健康状态：unknown=未调用过；ok=最近一次成功；degraded=偶发失败；failed=连续失败≥5 */
+  status: "unknown" | "ok" | "degraded" | "failed";
+  /** 累计失败次数 */
+  failureCount: number;
+  /** 最近一次错误信息（无则 null） */
+  lastError: string | null;
+  /** 最近一次成功时间戳（无则 null） */
+  lastSuccessAt: number | null;
+  /** 启动健康检查是否通过（未做检查为 null） */
+  healthy: boolean | null;
 }
 
 export interface RecallResult {
@@ -79,6 +97,8 @@ export interface EngineStats {
     entryCount: number;
     atCapacity: boolean;
   };
+  /** LLM 压缩调用健康状态 */
+  llmStatus: LlmStatus;
 }
 
 // ─── 引擎 ───────────────────────────────────────────────
@@ -90,6 +110,15 @@ export class LongContextEngine {
   private totalSummarized = 0;
   private lastSummarizeAt: number | null = null;
   private llmCall: ((prompt: string) => Promise<string>) | null;
+  /** LLM 压缩调用健康状态 */
+  private llmState: LlmStatus = {
+    configured: false,
+    status: "unknown",
+    failureCount: 0,
+    lastError: null,
+    lastSuccessAt: null,
+    healthy: null,
+  };
 
   constructor(opts: LongContextEngineOptions) {
     this.llmCall = opts.llmCall ?? null;
@@ -105,6 +134,7 @@ export class LongContextEngine {
       capsuleMaxCount: opts.capsuleMaxCount ??
         parseInt(process.env.STRUCT_CAPSULE_MAX_COUNT ?? "50", 10),
       storeMaxMB: opts.storeMaxMB,
+      llmHealthCheck: opts.llmHealthCheck,
       logger: opts.logger ?? (() => {}),
     };
     this.llmCall = opts.llmCall ?? null;
@@ -117,16 +147,70 @@ export class LongContextEngine {
     });
 
     if (this.llmCall) {
-      this.cm.setLlmCall(this.llmCall);
+      this.setLlmCall(this.llmCall);
     }
   }
 
   // ─── 注入 LLM ─────────────────────────────────────────
 
-  /** 设置/更换 LLM 调用函数（GLM-4 / DeepSeek / Claude 等） */
+  /**
+   * 设置/更换 LLM 调用函数（GLM-4 / DeepSeek / Claude 等）。
+   * 内部包裹一层健康追踪：成功计为 ok，失败累计并分级（degraded/failed），首次失败告警。
+   */
   setLlmCall(fn: (prompt: string) => Promise<string>): void {
-    this.llmCall = fn;
-    this.cm.setLlmCall(fn);
+    this.llmState.configured = true;
+    const wrapped: (prompt: string) => Promise<string> = async (prompt) => {
+      try {
+        const r = await fn(prompt);
+        this.llmState.status = "ok";
+        this.llmState.lastSuccessAt = Date.now();
+        this.llmState.lastError = null;
+        return r;
+      } catch (e) {
+        this.llmState.failureCount++;
+        const msg = e instanceof Error ? e.message : String(e);
+        this.llmState.lastError = msg;
+        if (this.llmState.failureCount === 1) {
+          this.options.logger?.(
+            `[LLM压缩] 首次调用失败：${msg}（压缩将降级为本地确定性摘要，不影响主流程）`,
+          );
+        }
+        this.llmState.status = this.llmState.failureCount >= 5 ? "failed" : "degraded";
+        throw e;
+      }
+    };
+    this.llmCall = wrapped;
+    this.cm.setLlmCall(wrapped);
+  }
+
+  /** 读取 LLM 压缩健康状态（副本，避免外部修改） */
+  getLlmStatus(): LlmStatus {
+    return { ...this.llmState };
+  }
+
+  /**
+   * 启动期健康检查：ping /models（或调用方提供的健康检查）。
+   * 返回 true=可达；失败时记录日志，不影响引擎启动。
+   */
+  async checkLlmHealth(): Promise<boolean> {
+    if (!this.options.llmHealthCheck) {
+      this.llmState.healthy = null;
+      return false;
+    }
+    try {
+      const ok = await this.options.llmHealthCheck();
+      this.llmState.healthy = ok;
+      if (!ok) {
+        this.options.logger?.("[LLM压缩] 健康检查未通过：/models 不可达，压缩将降级为本地摘要");
+      }
+      return ok;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.llmState.healthy = false;
+      this.llmState.lastError = msg;
+      this.options.logger?.(`[LLM压缩] 健康检查异常：${msg}`);
+      return false;
+    }
   }
 
   // ─── 喂入上下文 ───────────────────────────────────────
@@ -448,6 +532,7 @@ export class LongContextEngine {
       storedEntries: cmStats.evictedEntries,
       lastSummarizeAt: this.lastSummarizeAt,
       storeStats,
+      llmStatus: this.getLlmStatus(),
     };
   }
 

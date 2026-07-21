@@ -146,12 +146,32 @@ function createLlmCall(cfg: { baseUrl: string; apiKey: string; model: string }):
   };
 }
 
+/**
+ * 启动时健康检查：ping /models（OpenAI 兼容接口通用）。
+ * 失败（网络/Key/配额）不阻断启动，仅记录告警，引擎压缩降级为本地摘要。
+ */
+function createLlmHealthCheck(cfg: { baseUrl: string; apiKey: string }): () => Promise<boolean> {
+  const url = `${cfg.baseUrl}/models`;
+  return async (): Promise<boolean> => {
+    try {
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${cfg.apiKey}` },
+      });
+      return resp.ok;
+    } catch {
+      return false;
+    }
+  };
+}
+
 // ── 引擎单例 ───────────────────────────────────────────────
 
 const llmCfg = resolveLlmConfig();
 const engineOptions: LongContextEngineOptions = {
   llmCall: llmCfg ? createLlmCall(llmCfg) : undefined,
-  logger: undefined,
+  llmHealthCheck: llmCfg ? createLlmHealthCheck(llmCfg) : undefined,
+  logger: (msg: string) => console.error(`[struct-context] ${msg}`),
 };
 const engine = new LongContextEngine(engineOptions);
 
@@ -207,6 +227,14 @@ async function callTool(
             : 0,
           entryCount: stats.storeStats.entryCount,
           atCapacity: stats.storeStats.atCapacity,
+        },
+        llmStatus: {
+          configured: stats.llmStatus.configured,
+          status: stats.llmStatus.status,
+          failureCount: stats.llmStatus.failureCount,
+          lastError: stats.llmStatus.lastError,
+          lastSuccessAt: stats.llmStatus.lastSuccessAt,
+          healthy: stats.llmStatus.healthy,
         },
         policy: {
           conservative: policy.conservative,
@@ -333,6 +361,11 @@ if (isMain) {
   if (!process.env.MCP_NO_BANNER) {
     if (llmCfg) {
       console.error(`[struct-context] LLM 压缩已启用：${llmCfg.model} @ ${llmCfg.baseUrl}`);
+      // 启动期健康检查（ping /models），异步执行不阻塞 MCP 协议启动
+      void engine.checkLlmHealth().then((ok) => {
+        if (ok) console.error("[struct-context] LLM 健康检查通过 ✓");
+        else console.error("[struct-context] LLM 健康检查未通过 ✗（压缩将降级为本地摘要）");
+      });
     } else {
       console.error("[struct-context] 未检测到 API Key，LLM 压缩走确定性回退（省钱但不准）。设 STRUCT_LLM_API_KEY（可选 STRUCT_LLM_BASE_URL / STRUCT_LLM_MODEL）启用 AI 摘要。");
     }
