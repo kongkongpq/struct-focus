@@ -21,3 +21,8 @@ packages/context/benchmark/results/
 *.csv
 docs/benchmarks/_last-run.*
 
+# 本地草稿 / 会话笔记（不进仓库）
+docs/session-notes/
+docs/GITHUB-SAFETY-GUIDE.md
+docs/SAFE-RESEARCH-WORKFLOW.md
+
