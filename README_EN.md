@@ -111,7 +111,7 @@ pnpm bench:bm25
 ```bash
 pnpm install
 pnpm build      # tsc -b (context → dist)
-pnpm test       # vitest run (context 167 + mcp 16 = 183 cases)
+pnpm test       # vitest run (context 173 + mcp 19 = 192 cases)
 pnpm lint       # eslint packages/context/src packages/mcp/src
 ```
 

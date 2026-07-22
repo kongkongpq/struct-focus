@@ -116,6 +116,22 @@ const { injectText } = await engine.recall(query);
 
 架构设计详见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 
+## 基准测试（Benchmarks）
+
+| 基准 | 验证什么 | 需要 Key? | 报告 |
+|:---|:---|:---:|:---|
+| NIAH（hardcore 网格） | 长上下文针中针召回 | 可选 | `packages/context/bench/HARDCORE_V2_REPORT.md` |
+| BM25 搜索精度 | BM25 vs 朴素 `includes`（P@5/R@5） | **否** | [docs/benchmarks/bm25-precision.md](./docs/benchmarks/bm25-precision.md) |
+| LoCoMo 长对话 | 多轮召回 + 时序（Cat2）推理 | 是 | `packages/context/bench/LOCOMO_REPORT.md` |
+| 多跳 QA（1.3） | 跨文档推理 | 是 | 待补 |
+| DocQA 750K（1.4） | 长文档问答 | 是 | 待补 |
+
+统一入口 `bench/run.mjs` 支持 `--suite <bm25|niah|multihop|docqa|all>`；无 Key 的 BM25 套件可本地直接跑：
+
+```bash
+pnpm bench:bm25
+```
+
 ## 环境要求
 
 - **Node >= 22.6.0**（MCP Server 用 `node --experimental-strip-types` 直跑 TypeScript，22.6 起支持；低版本无法启动 `@structfocus/mcp`）
@@ -126,7 +142,7 @@ const { injectText } = await engine.recall(query);
 ```bash
 pnpm install
 pnpm build      # tsc -b（context → dist）
-pnpm test       # vitest run（context 167 + mcp 16 = 183 用例）
+pnpm test       # vitest run（context 173 + mcp 19 = 192 用例）
 pnpm lint       # eslint packages/context/src packages/mcp/src
 ```
 
