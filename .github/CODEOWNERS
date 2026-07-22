@@ -1,0 +1,13 @@
+# CODEOWNERS — PR review routing
+# Syntax: <pattern> @owner
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @kongkongpq
+
+# Core engine
+/packages/context/      @kongkongpq
+/packages/mcp/          @kongkongpq
+
+# CI / automation
+/.github/               @kongkongpq

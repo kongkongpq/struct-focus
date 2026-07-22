@@ -1,0 +1,33 @@
+# PR auto-labeling rules (consumed by .github/workflows/labeler.yml)
+# Missing labels are created automatically by actions/labeler on first PR.
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "README.md"
+          - "CONTRIBUTING.md"
+          - "CODE_OF_CONDUCT.md"
+          - "SECURITY.md"
+          - "CHANGELOG.md"
+          - "docs/**"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/tests/**"
+          - "**/*.test.ts"
+
+benchmarks:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/context/bench/**"
+
+engine:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/context/src/**"
+
+mcp-server:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/mcp/src/**"
