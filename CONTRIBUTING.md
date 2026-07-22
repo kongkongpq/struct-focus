@@ -1,66 +1,62 @@
 # Contributing to StructFocus
 
-Thanks for your interest! This is a **solo, transitional project** (a 9-day sprint from zero to a working benchmark). The contribution model is deliberately minimal — read on.
+First off — thank you for considering a contribution. Whether it's a bug report, a fix, a benchmark result, or a new integration, it all helps make FIFO-truncation-replacement better for everyone. **We welcome issues and pull requests.**
+
+## Code of Conduct
+
+By participating in this project you agree to abide by our [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Development Setup
 
 ```bash
-# Prerequisites: Node.js >= 22.6 (MCP Server uses --experimental-strip-types), pnpm >= 9
-git clone https://github.com/structfocus/structfocus.git
-cd structfocus
-pnpm install
-```
-
-## Common Commands
-
-```bash
-pnpm test           # Run tests (vitest)
-pnpm build          # Build all packages
-```
-
-> Note: there is no CI. `pnpm test` is the contract. Run it before you share anything.
-
-## Project Structure
-
-```
-structfocus/
-├── packages/
-│   ├── context/                # @structfocus/context — the core engine (import standalone)
-│   │   ├── src/
-│   │   │   ├── longcontext-engine.ts   # LongContextEngine (feed / recall / autoManage)
-│   │   │   ├── manager.ts              # ContextManager (four-layer hot/cold runtime)
-│   │   │   ├── content-store.ts        # ContentStore (disk BM25 full-text)
-│   │   │   ├── capsule.ts              # CapsuleStore (semantic summaries)
-│   │   │   ├── builder.ts              # buildContext (six-layer assembly → LLMMessage[])
-│   │   │   ├── summarize.ts            # chunkBySemantic + summarizeToCapsule
-│   │   │   └── ...
-│   │   ├── tests/               # vitest unit tests (xxx.test.ts)
-│   │   └── bench/               # local benchmarks (search-precision.mjs, locomo/, ...)
-│   └── mcp/                     # @structfocus/mcp — MCP Server (JSON-RPC 2.0 over stdio)
-│       └── src/index.ts         # 8 MCP tools + JSON-RPC handler
-├── docs/
-│   ├── ARCHITECTURE.md         # full design writeup
-│   ├── ROADMAP-TO-10.md        # 7.5 → 10 score improvement plan
-│   └── benchmarks/             # benchmark reports (bm25-precision.md, README.md index)
-├── README.md                   # Chinese README (primary)
-├── README_EN.md                # English README
-└── CONTRIBUTING.md
-```
-
-`context` is the foundation; `mcp` depends on it. No circular dependencies.
-
-## Local Development
-
-```bash
-# Prerequisites: Node.js >= 22.6 (MCP Server uses --experimental-strip-types), pnpm >= 9
-git clone https://github.com/structfocus/structfocus.git
-cd structfocus
+# Prerequisites: Node.js >= 22.6 (MCP Server runs TS via --experimental-strip-types), pnpm >= 9
+git clone https://github.com/kongkongpq/struct-focus.git
+cd struct-focus
 pnpm install
 pnpm build      # tsc -b (context → dist)
 pnpm test       # vitest run (the contract — run before sharing anything)
 ```
 
-## Unit Test Conventions
+> The full engine source lives under `packages/context/src` (`longcontext-engine.ts`, `manager.ts`, `content-store.ts`, `capsule.ts`, `builder.ts`). The MCP server is `packages/mcp/src/index.ts` (8 tools + JSON-RPC over stdio). `context` is the foundation; `mcp` depends on it.
+
+## Continuous Integration
+
+Pushing to `main` (or opening a PR against `main`) triggers GitHub Actions: `pnpm typecheck → lint → test`. **CI must be green before merge.** A red CI means the PR is not ready — please fix locally and push again.
+
+```bash
+# Run the same checks CI runs, locally:
+pnpm typecheck
+pnpm lint
+pnpm test
+```
+
+## How to Contribute
+
+### Issues — welcome
+
+Bug reports and sharp critiques are the most valuable contributions.
+
+1. **Search first** to avoid duplicates.
+2. Open a new issue using the **Bug Report** or **Feature Request** template.
+3. Include: reproduction steps, expected vs. actual behavior, environment (OS / Node / pnpm version).
+
+If StructFocus *lost* to FIFO truncation in your scenario, that's the most useful issue you can file — it tells us exactly where to improve.
+
+### Pull Requests — welcome
+
+1. **Fork** the repo and create a branch from `main`:
+   - `fix/<area>-<short>` (e.g. `fix/bm25-idf`)
+   - `feat/<area>-<short>` (e.g. `feat/hybrid-retrieval`)
+   - `bench/<name>` (e.g. `bench/locomo`)
+2. **Make it small and focused** — one logical change per commit.
+3. **Write/extend tests** for behavior you add or change. Keep disk state isolated (see below).
+4. **Run the checks** (`pnpm typecheck && pnpm lint && pnpm test`) and make sure they pass.
+5. **Open a PR** against `main` using the PR template. Link the related issue (`Closes #123`).
+6. If your change affects a benchmark or public API, note it in `CHANGELOG.md` under `Unreleased`.
+
+We review PRs on a best-effort basis. A clear description + green CI + a focused diff gets merged fastest.
+
+### Unit Test Conventions
 
 - Place tests under the owning package's `tests/` directory, named `*.test.ts`.
 - Use `vitest` (already configured). Import from the package entry (`@structfocus/context`) or sibling `../src/*`.
@@ -71,33 +67,6 @@ pnpm test       # vitest run (the contract — run before sharing anything)
   ```
 - Prefer asserting behavior (toMessages role alternation, recall filtering) over internal counters.
 
-## How to Contribute
-
-### Issues: yes
-
-Bug reports and sharp critiques are welcome.
-
-1. Search existing issues to avoid duplicates.
-2. Open a new issue with: reproduction steps, expected vs. actual behavior, environment (OS / Node / pnpm version).
-
-If StructFocus *lost* to FIFO truncation in your scenario, that's the most useful issue you can file.
-
-### Pull Requests: no (for now)
-
-We do **not** maintain a PR queue. This keeps a solo project honest and maintainable.
-
-- **Fork it.** Hack on your own variant — that's the intended path.
-- **If your fork proves something** (a fix, a new integration mode, a benchmark result), open an **Issue** linking to it. That's the fastest way for it to surface here.
-- Don't manufacture commit history. The real 9-day arc is the point.
-
-### Fork workflow conventions (when you publish a variant)
-
-Even though we don't merge PRs, consistent hygiene helps others build on your fork:
-
-- **Branch naming**: `fix/<area>-<short>` (e.g. `fix/bm25-idf`), `feat/<area>-<short>`, `bench/<name>`.
-- **Commit messages**: imperative, short subject line (`fix(context): cap BM25 IDF at 0`), optionally a body explaining *why*.
-- Keep each commit focused; one logical change per commit.
-
 ### Code Style
 
 - TypeScript strict mode; ESM only (`"type": "module"`).
@@ -106,14 +75,14 @@ Even though we don't merge PRs, consistent hygiene helps others build on your fo
 
 ## Good First Issues
 
-Ideas for first contributions (fork-friendly, well-scoped):
+Well-scoped starting points:
 
-1. **Hybrid retrieval**: wire the reserved `SearchOptions.mode: "hybrid"` path to blend BM25 + a local embedding index (no LLM call) — direct follow-up to `docs/benchmarks/bm25-precision.md`.
-2. **Synonym expansion**: add a small synonym dictionary to `ContentStore.search` so the 4 fuzzy queries in the BM25 bench stop failing on zero-overlap synonyms.
+1. **Hybrid retrieval**: wire the reserved `SearchOptions.mode: "hybrid"` path to blend BM25 + a local embedding index (no LLM call).
+2. **Synonym expansion**: add a small synonym dictionary to `ContentStore.search` so the fuzzy queries in the BM25 bench stop failing on zero-overlap synonyms.
 3. **`context_search` richer output**: return snippet offsets / score in the MCP tool result so clients can render highlights.
-4. **Windows CI smoke**: a 2-minute `pnpm bench:bm25` smoke step that needs no LLM key (see roadmap 4.2).
+4. **Windows CI smoke**: a 2-minute `pnpm bench:bm25` smoke step that needs no LLM key.
 5. **Capsule quality eval**: a deterministic scoring harness comparing `summarizeToCapsule` output against gold decisions (extends `packages/context/tests/summarize.test.ts`).
 
 ## License
 
-By contributing (including by opening issues or publishing a fork), your work is understood to be under the [Apache-2.0 License](./LICENSE).
+By contributing (including by opening issues or PRs), your work is understood to be under the [Apache-2.0 License](./LICENSE).

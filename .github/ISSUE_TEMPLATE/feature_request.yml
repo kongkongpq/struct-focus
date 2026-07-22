@@ -1,0 +1,39 @@
+name: Feature Request
+description: Suggest a new feature, integration, or improvement for StructFocus
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Great idea — thanks for suggesting it! Tell us what you'd like and why it matters.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem would this solve? Why is it needed?
+      placeholder: "e.g. When context exceeds X, recall misses Y because ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Sketch the API or behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you thought about?
+    validations:
+      required: false
+  - type: textarea
+    id: benchmarks
+    attributes:
+      label: Benchmark / evidence (optional)
+      description: If this is about recall quality, attach a benchmark result or numbers.
+      render: shell
+    validations:
+      required: false

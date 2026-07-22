@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/kongkongpq/struct-focus/discussions
+    about: Ask usage questions and share ideas in GitHub Discussions (enable it in repo Settings if you don't see it).
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/kongkongpq/struct-focus/security/advisories/new
+    about: Please report security issues privately via the Security tab — NOT as a public issue.

@@ -4,6 +4,14 @@
   "private": true,
   "license": "Apache-2.0",
   "description": "StructFocus - LLM 上下文注意力管理引擎 (pnpm monorepo)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kongkongpq/struct-focus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kongkongpq/struct-focus/issues"
+  },
+  "homepage": "https://github.com/kongkongpq/struct-focus#readme",
   "type": "module",
   "scripts": {
     "build": "tsc -b",
