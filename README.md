@@ -75,8 +75,6 @@ Four-layer hot/cold pipeline. Active conversation stays hot; idle context is pro
                               └──────────────────────────┘
 ```
 
-See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full design.
-
 ## MCP Tools
 
 | Tool | Purpose |
@@ -95,7 +93,7 @@ See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full design.
 | Benchmark | What it proves | Key needed? | Report |
 |:---|:---|:---:|:---|
 | NIAH (hardcore grid) | Needle-in-haystack over long context | optional | `packages/context/bench/HARDCORE_V2_REPORT.md` |
-| BM25 search precision | BM25 vs simple `includes` (P@5/R@5) | **no** | [docs/benchmarks/bm25-precision.md](./docs/benchmarks/bm25-precision.md) |
+| BM25 search precision | BM25 vs simple `includes` (P@5/R@5) | **no** | 本地生成 (pnpm bench:bm25) |
 | LoCoMo long-dialog | Multi-turn recall + temporal (Cat2) reasoning | yes | `packages/context/bench/LOCOMO_REPORT.md` |
 | Multi-hop QA (1.3) | Cross-document reasoning | yes | pending |
 | DocQA 750K (1.4) | Long-document Q&A | yes | pending |
@@ -247,14 +245,12 @@ engine.feedBatch(history);
 const { injectText } = await engine.recall(query);
 ```
 
-架构设计详见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
-
 ## 基准测试（Benchmarks）
 
 | 基准 | 验证什么 | 需要 Key? | 报告 |
 |:---|:---|:---:|:---|
 | NIAH（hardcore 网格） | 长上下文针中针召回 | 可选 | `packages/context/bench/HARDCORE_V2_REPORT.md` |
-| BM25 搜索精度 | BM25 vs 朴素 `includes`（P@5/R@5） | **否** | [docs/benchmarks/bm25-precision.md](./docs/benchmarks/bm25-precision.md) |
+| BM25 搜索精度 | BM25 vs 朴素 `includes`（P@5/R@5） | **否** | 本地生成 (bench:bm25) |
 | LoCoMo 长对话 | 多轮召回 + 时序（Cat2）推理 | 是 | `packages/context/bench/LOCOMO_REPORT.md` |
 | 多跳 QA（1.3） | 跨文档推理 | 是 | 待补 |
 | DocQA 750K（1.4） | 长文档问答 | 是 | 待补 |

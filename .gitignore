@@ -19,10 +19,6 @@ Thumbs.db
 # benchmark 结果产物（可本地复现，不提交）
 packages/context/benchmark/results/
 *.csv
-docs/benchmarks/_last-run.*
-
-# 本地草稿 / 会话笔记（不进仓库）
-docs/session-notes/
-docs/GITHUB-SAFETY-GUIDE.md
-docs/SAFE-RESEARCH-WORKFLOW.md
+# 整个 docs/ 不进仓库（架构/路线图/基准报告/草稿均不推送）
+docs/
 
