@@ -20,7 +20,7 @@ describe("MCP JSON-RPC handshake", () => {
     const res: any = await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     expect(res.jsonrpc).toBe("2.0");
     expect(res.id).toBe(1);
-    expect(res.result.protocolVersion).toBe("2024-11-05");
+    expect(res.result.protocolVersion).toBe("2025-06-18");
     expect(res.result.capabilities).toEqual({ tools: {} });
     expect(res.result.serverInfo.name).toBe("struct-context-mcp");
   });
@@ -45,6 +45,20 @@ describe("MCP JSON-RPC handshake", () => {
       "context_search",
     ]);
     expect(names.length).toBe(8);
+
+    // 每个工具都应带 2025-06-18 引入的 Tool Annotations（语义标注）
+    const byName = Object.fromEntries(res.result.tools.map((t: any) => [t.name, t]));
+    expect(byName.context_inject.annotations).toEqual({
+      readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false,
+    });
+    expect(byName.context_recall.annotations).toEqual({
+      readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false,
+    });
+    expect(byName.context_forget.annotations.destructiveHint).toBe(true);
+    expect(byName.context_focus.annotations.openWorldHint).toBe(true);
+    for (const n of ["context_status", "context_stats", "context_search", "context_set_policy"]) {
+      expect(byName[n].annotations).toBeDefined();
+    }
   });
 
   it("未知方法返回 method not found", async () => {

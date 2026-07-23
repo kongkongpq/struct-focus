@@ -26,10 +26,20 @@ const SERVER_VERSION = "0.2.0";
 
 // ── MCP 工具定义 ────────────────────────────────────────────
 
+// MCP 2025-06-18 Tool Annotations：让客户端知道工具是否只读 / 破坏性 / 幂等 / 读外部世界
+interface ToolAnnotations {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 interface McpTool {
   name: string;
   description: string;
   inputSchema: { type: "object"; properties: Record<string, unknown>; required?: string[] };
+  annotations?: ToolAnnotations;
 }
 
 const TOOLS: McpTool[] = [
@@ -45,6 +55,7 @@ const TOOLS: McpTool[] = [
       },
       required: ["content"],
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
     name: "context_recall",
@@ -57,11 +68,13 @@ const TOOLS: McpTool[] = [
       },
       required: ["query"],
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "context_status",
     description: "查看引擎状态：累计注入/概括 token、胶囊数、活跃/归档条目数、最后概括时间。",
     inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "context_forget",
@@ -73,6 +86,7 @@ const TOOLS: McpTool[] = [
       },
       required: ["target"],
     },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "context_focus",
@@ -86,6 +100,7 @@ const TOOLS: McpTool[] = [
       },
       required: ["path"],
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   },
   {
     name: "context_set_policy",
@@ -102,11 +117,13 @@ const TOOLS: McpTool[] = [
         userOverride: { type: "string", enum: ["auto", "aggressive", "conservative"], description: "用户覆盖模式（默认 auto）" },
       },
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "context_stats",
     description: "精简状态速览：累计注入/概括、胶囊数、活跃/归档条目、磁盘占用、LLM 健康、当前 emergency 阈值。比 context_status 更紧凑。",
     inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "context_search",
@@ -119,6 +136,7 @@ const TOOLS: McpTool[] = [
       },
       required: ["query"],
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
 ];
 
@@ -368,7 +386,7 @@ export async function handle(
       jsonrpc: "2.0",
       id,
       result: {
-        protocolVersion: "2024-11-05",
+        protocolVersion: "2025-06-18",
         capabilities: { tools: {} },
         serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
       },
