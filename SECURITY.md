@@ -15,8 +15,8 @@
 
 请通过以下方式私下报告：
 
-- **邮箱**：向项目维护者发送邮件（在 GitHub 个人主页可见），标题注明 `[SECURITY]`。
-- 或在 GitHub 仓库使用 **Security → Report a vulnerability**（如已启用私有漏洞上报）。
+- **邮箱**：向项目维护者发送邮件（kongkong1935@outlook.com），标题注明 `[SECURITY]`。
+- 
 
 请在报告中尽量包含：
 
