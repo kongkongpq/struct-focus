@@ -884,10 +884,11 @@ export class ContextManager {
   /**
    * 对「非活跃旧内容」做真正的 LLM 概括归档（L2→L3 为胶囊）——产品核心「LLM 压缩」落点。
    *
-   * 背景断点：本类 manage() 的 L1 分支（downgradeToL3）只把条目标记为 compressed，
-   * 从不调用 summarizeAndCapsule；真正的「概括成胶囊 + 原文落盘 ContentStore」仅存在于
-   * engine.summarize()，而它被 feed→maybeAutoSummarize 的 50K token 阈值卡住（正常用量触达不到）。
-   * 因此「LLM 压缩归档为胶囊」在生产路径里实际上是死逻辑。
+   * 背景：manage() 的 L1 分支（downgradeToL3）只做启发式截断/标记 compressed（非破坏式：
+   * 截断前已保留 originalContent 并落盘 ContentStore），从不调用 summarizeAndCapsule；
+   * 真正的「概括成胶囊 + 原文落盘 ContentStore + 驱逐原条目释放窗口」由 summarizeAndCapsule 完成。
+   * engine.summarize() 受 feed→maybeAutoSummarize 的 50K token 阈值制约（正常用量少触达），
+   * 故 autoManage 需在 manage() 之后主动调用本方法，才能让「LLM 压缩归档为胶囊」真正跑在生产路径上。
    *
    * 修复：autoManage 在 manage() 之后调用本方法，对相对话题锚点非活跃的旧内容做概括。
    * 30s 节流避免每步都打 LLM；无 LLM 时走确定性回退（仍生成胶囊）。
@@ -1034,19 +1035,41 @@ export class ContextManager {
       if (!isInactive) continue;
 
       // 压缩内容并降级到 L3_compressed
-      const compressed = e.content.length > 4000 ? e.content.slice(0, 2000) + `...[截断 ${e.content.length} 字符]` : e.content;
+      const willTruncate = e.content.length > 4000;
+      const compressed = willTruncate ? e.content.slice(0, 2000) + `...[截断 ${e.content.length} 字符]` : e.content;
       const idx = this.entries.findIndex((entry) => entry.id === e.id);
       if (idx >= 0) {
+        const cur = this.entries[idx]!;
+        // 非破坏式截断：截断前把完整原文保存到 originalContent + ContentStore，可 expand 还原；
+        // 并同步更新 tokenCount，避免窗口 token 记账与实际内容脱节。
+        const original = cur.originalContent ?? cur.content;
         this.entries[idx] = {
-          ...this.entries[idx]!,
+          ...cur,
           compressed: true,
           compressedContent: compressed,
           compressedAt: Date.now(),
           content: compressed,
+          ...(willTruncate
+            ? { originalContent: original, tokenCount: BudgetManager.estimateTokens(compressed) }
+            : {}),
         };
+        if (willTruncate) {
+          this.store
+            .save({
+              entryId: cur.id,
+              originalContent: original,
+              originalTokenCount: cur.tokenCount,
+              savedAt: Date.now(),
+              reason: "downgrade_L3",
+              source: cur.source,
+              sourceType: cur.sourceType,
+              conversationId: cur.conversationId,
+            })
+            .catch((err) => this.logger.warn(`downgradeToL3 save failed: ${String(err)}`));
+        }
         this.place(e.id, "L3_compressed", "system", `downgrade_L3`);
         count++;
-        tokens += e.tokenCount;
+        tokens += cur.tokenCount;
       }
     }
 
@@ -2042,12 +2065,28 @@ export class ContextManager {
     await this.capsules.save(output.capsule);
 
     // 驱逐原始条目 + 注入 L0 摘要 observation
+    // 原文已在上方存入 ContentStore（可经 recall/expand 恢复），此处必须真正从活跃窗口
+    // 移除原条目，否则窗口 token 不会释放（胶囊只是"额外"内容，反而使窗口变大）。
+    let evictedCount = 0;
+    let evictedTokens = 0;
     for (const e of matched) {
       if (e.protectedBy) continue; // 受保护条目不动
       await this.place(e.id, "L3_compressed", "system", "概括为胶囊", {
         capsuleSummary: output.l0Summary,
         capsuleId: output.capsule.id,
       });
+      const idx = this.entries.findIndex((entry) => entry.id === e.id);
+      if (idx >= 0) {
+        const cur = this.entries[idx]!;
+        this.entries[idx] = {
+          ...cur,
+          evicted: true,
+          evictedAt: Date.now(),
+          externalRef: `ext://${cur.id}`,
+        };
+        evictedCount++;
+        evictedTokens += cur.tokenCount;
+      }
     }
 
     this.appendObservation(
@@ -2056,7 +2095,8 @@ export class ContextManager {
     );
 
     this.logger.debug(
-      `summarizeAndCapsule: ${output.capsule.id} 原始 ${output.capsule.originalTokens} tokens → 胶囊 ${output.capsule.capsuleTokens} tokens`,
+      `summarizeAndCapsule: ${output.capsule.id} 原始 ${output.capsule.originalTokens} tokens → 胶囊 ${output.capsule.capsuleTokens} tokens；` +
+        `驱逐 ${evictedCount} 条 (${evictedTokens} tokens) 释放窗口`,
     );
 
     return output;

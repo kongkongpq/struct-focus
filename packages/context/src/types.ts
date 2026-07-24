@@ -95,8 +95,12 @@ export interface ManagementPolicy {
   topicDistance: number; // 默认 3
   /** 单条消息超过此 token 直接评估是否该压缩归档 */
   maxChunkBeforeManage: number; // 默认 4000
-  /** 用户 override 模式 */
-  userOverride: "manual" | "auto";
+  /**
+   * 用户 override 模式。
+   * 目前为声明式元数据（记录用户意图，不直接改变归档逻辑；实际强弱由
+   * conservative / *Threshold 字段控制）。取值与 MCP context_set_policy 暴露的枚举保持一致。
+   */
+  userOverride: "auto" | "aggressive" | "conservative";
 }
 
 export const DEFAULT_MANAGEMENT_POLICY: ManagementPolicy = {
