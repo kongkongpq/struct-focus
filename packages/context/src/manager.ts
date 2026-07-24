@@ -503,15 +503,35 @@ export class ContextManager {
   // ─── 结构化压缩 ────────────────────────────────────────
 
   structuredCompress(entry: ContextEntry): ContextEntry {
-    const compressedContent = structuredCompressContent(entry.compressedContent ?? entry.content);
+    // 非破坏式：首次压缩时把完整原文保存到 originalContent + ContentStore，
+    // 可经 expandEntry / recall→expand 还原；否则头尾+锚点抽取式压缩会永久丢失正文。
+    const original = entry.originalContent ?? entry.content;
+    const compressedContent = structuredCompressContent(original);
     const compressedTokenCount = BudgetManager.estimateTokens(compressedContent);
-    return {
+    const needPersist = entry.originalContent === undefined;
+    const result: ContextEntry = {
       ...entry,
       compressed: true,
       compressedContent,
       compressedTokenCount,
       tokenCount: compressedTokenCount,
+      originalContent: original,
     };
+    if (needPersist) {
+      this.store
+        .save({
+          entryId: entry.id,
+          originalContent: original,
+          originalTokenCount: entry.tokenCount,
+          savedAt: Date.now(),
+          reason: "compress",
+          source: entry.source,
+          sourceType: entry.sourceType,
+          conversationId: entry.conversationId,
+        })
+        .catch((err) => this.logger.warn(`structuredCompress save failed: ${String(err)}`));
+    }
+    return result;
   }
 
   /** LLM 摘要钩子（设计：可选，Phase 1 保留未启用）。此处为确定性紧凑回退（头+尾），无外部依赖 */
