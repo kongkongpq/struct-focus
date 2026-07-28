@@ -23,17 +23,17 @@ export const SUITE_META = {
   },
   niah: {
     name: "niah",
-    description: "Needle-in-Haystack 12 格热力图（需 LLM_API_KEY + 编译 harness）",
+    description: "Needle-in-Haystack：小窗口下唯一代号被溢出，StructFocus 压缩+召回恢复（需 GLM key）",
     needsLLM: true,
   },
   multihop: {
     name: "multihop",
-    description: "多跳 QA 3文档×20题（需 LLM_API_KEY + 题库，见 roadmap 1.3）",
+    description: "多跳 QA：3 文档跨跳推理，文档溢出后 StructFocus 召回相关事实（需 GLM key）",
     needsLLM: true,
   },
   docqa: {
     name: "docqa",
-    description: "超窗口长文档 QA（需 LLM_API_KEY，见 roadmap 1.4）",
+    description: "超窗口长文档 QA：长文档溢出后 StructFocus 召回原文作答（需 GLM key）",
     needsLLM: true,
   },
 };

@@ -440,9 +440,13 @@ export class LongContextEngine {
 
     if (entryResults.length > 0) {
       injectLines.push(`📄 相关片段 (${entryResults.length}):`);
+      // 召回片段给足长度以便作答（上限 RECALL_SNIPPET_MAX，超长再截断）。
+      const RECALL_SNIPPET_MAX = 1200;
       for (const e of entryResults) {
-        const snippet = e.originalContent.slice(0, 200).replace(/\n/g, " ");
-        injectLines.push(`  • ${e.source ?? e.entryId}: ${snippet}...`);
+        const full = e.originalContent.replace(/\n/g, " ");
+        const truncated = full.length > RECALL_SNIPPET_MAX;
+        const snippet = (truncated ? full.slice(0, RECALL_SNIPPET_MAX) : full) + (truncated ? "..." : "");
+        injectLines.push(`  • ${e.source ?? e.entryId}: ${snippet}`);
       }
     }
 

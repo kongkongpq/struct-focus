@@ -225,12 +225,52 @@ function structuredCompressContent(content: string): string {
     flush();
     return segs.join("\n");
   }
-  // 回退：头 + 错误 + 尾，套用锚点外壳
-  const lines = content.split("\n");
-  const head = lines.slice(0, 8).join("\n");
-  const errors = lines.filter((l) => ERROR_RE.test(l)).slice(0, 10).join("\n");
-  const tail = lines.slice(-8).join("\n");
-  return `[动作+结果]\n${head}\n[关键发现]\n${errors || "无"}\n[下一步]\n${tail}`;
+  // 回退：从无任何锚点标记的原始文本做确定性语义抽取。
+  // 与主分支共用同一套锚点词表（COMPRESS_ANCHORS），保证压缩产物结构一致、可检索，
+  // 而非朴素地头+尾截断导致信息在压缩时丢失。
+  // 单元化：先按行、再按句末标点切分，兼容中文长句与英文/无标点短行。
+  const units = content
+    .split(/\n+/)
+    .flatMap((l) => l.split(/(?<=[。！？.!?])\s*/))
+    .map((s) => s.trim())
+    .filter((s) => s.length > 3);
+  if (units.length === 0) {
+    return "[目标] (无内容)\n[状态] 无\n[动作+结果] 无\n[关键发现] 无\n[失败] 无\n[下一步] 无";
+  }
+  const goal =
+    units.find(
+      (s) =>
+        /^(用户|Human)[：:]/.test(s) ||
+        /(想|要做|在做|项目|问题|目标|需求|修复|实现|解决)/.test(s),
+    ) ?? units[0]!;
+  const failures = units
+    .filter((s) =>
+      /(error|fail|错误|失败|异常|崩溃|拒绝|超时|OOM|死锁|panic|abort)/i.test(s),
+    )
+    .slice(0, 3);
+  const findings = units
+    .filter((s) =>
+      /(发现|关键|原因|根因|定位|确认|结果|显示|回升|下降|提升|优化|指标)/.test(s),
+    )
+    .slice(0, 3);
+  const actions = units
+    .filter((s) =>
+      /(实现|完成|写好|修复|加|改|配置|采用|换成|提交|解决|搞定|落地)/.test(s),
+    )
+    .slice(0, 3);
+  const next = units
+    .filter((s) => /(下一步|接下来|还需要|待办|计划|想要|准备|跟进)/.test(s))
+    .slice(0, 2);
+  const join = (arr: string[]): string =>
+    arr.length ? arr.map((s) => s.slice(0, 160)).join("; ") : "无";
+  return [
+    `[目标] ${goal.slice(0, 200)}`,
+    `[状态] ${actions.length ? "已推进" : "进行中"}`,
+    `[动作+结果] ${join(actions)}`,
+    `[关键发现] ${join(findings)}`,
+    `[失败] ${join(failures)}`,
+    `[下一步] ${next.length ? join(next) : "无"}`,
+  ].join("\n");
 }
 
 /** 层1 截断：保留头 500 tok + 尾部 500 tok + 中部 50 行采样（设计 §2.1） */

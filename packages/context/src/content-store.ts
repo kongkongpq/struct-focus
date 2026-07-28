@@ -205,6 +205,8 @@ export class ContentStore {
   private async ensureReady(): Promise<void> {
     if (this.ready) return;
     await fs.mkdir(this.root, { recursive: true });
+    // 预建 entries 基目录，缩小并发 mkdir 的竞态面（Windows recursive mkdir 并发易 ENOENT）
+    await fs.mkdir(path.join(this.root, "entries"), { recursive: true });
     this.ready = true;
     // 惰性建索引
     await this.ensureIndex();
@@ -225,8 +227,21 @@ export class ContentStore {
   async save(entry: StoredContent): Promise<void> {
     await this.ensureReady();
     const p = this.entryPath(entry.entryId);
-    await fs.mkdir(path.dirname(p), { recursive: true });
-    await fs.writeFile(p, JSON.stringify(entry, null, 2), "utf-8");
+    // Windows 下并发 recursive mkdir 存在竞态（nodejs/node#22095），可能导致 ENOENT 丢数据；
+    // 此处对「建目录 + 写文件」做有限重试，保证突发批量落盘（如整窗压缩）不丢条目。
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await fs.mkdir(path.dirname(p), { recursive: true });
+        await fs.writeFile(p, JSON.stringify(entry, null, 2), "utf-8");
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        await new Promise((r) => setTimeout(r, 15 * (attempt + 1)));
+      }
+    }
+    if (lastErr) throw lastErr;
     // 更新索引
     this.indexEntry(entry);
     // 异步触发磁盘 LRU 清理（不阻塞 save）
