@@ -288,13 +288,14 @@ export async function summarizeToCapsule(
   // Step 1: 语义分块
   const chunks = chunkBySemantic(input.entries);
 
-  // Step 2: 每块并发生成摘要（LLM 调用 Promise.all，单块 10s 超时后回退确定性摘要）
+  // Step 2: 每块并发生成摘要（LLM 调用 Promise.all，单块 30s 超时后回退确定性摘要）
+  // 超时设 30s：覆盖 GLM 等服务的冷启动延迟（首调用常 >10s），避免生产首压缩静默退化为确定性摘要。
   const summarizeChunk = async (chunkIdx: number): Promise<string> => {
     const chunkText = chunks[chunkIdx]!.map((e) => e.content).join("\n\n");
     if (!llmCall) return deterministicSummary(chunkText);
     const prompt = buildSummarizePrompt(chunkText, category, chunkIdx, chunks.length);
     try {
-      return await withTimeout(llmCall(prompt), 10_000, `chunk ${chunkIdx} LLM`);
+      return await withTimeout(llmCall(prompt), 30_000, `chunk ${chunkIdx} LLM`);
     } catch {
       // 失败/超时：回退到确定性摘要，不影响主流程
       return deterministicSummary(chunkText);

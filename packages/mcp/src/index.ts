@@ -306,16 +306,33 @@ async function callTool(
     }
     case "context_set_policy": {
       const policy: Partial<ManagementPolicy> = {};
+      const USER_OVERRIDE_VALUES = ["auto", "aggressive", "conservative"] as const;
+      const errors: string[] = [];
       const bool = (k: keyof ManagementPolicy, v: unknown) => { if (typeof v === "boolean") (policy as Record<string, unknown>)[k] = v; };
-      const num = (k: keyof ManagementPolicy, v: unknown) => { if (typeof v === "number") (policy as Record<string, unknown>)[k] = v; };
-      const str = (k: keyof ManagementPolicy, v: unknown) => { if (typeof v === "string") (policy as Record<string, unknown>)[k] = v; };
+      const numRange = (k: keyof ManagementPolicy, v: unknown, min: number, max: number) => {
+        if (v === undefined) return;
+        if (typeof v === "number" && Number.isFinite(v) && v >= min && v <= max) {
+          (policy as Record<string, unknown>)[k] = v;
+        } else {
+          errors.push(`${k} 必须在 [${min}, ${max}] 之间`);
+        }
+      };
+      const strEnum = (k: keyof ManagementPolicy, v: unknown, allowed: readonly string[]) => {
+        if (v === undefined) return;
+        if (typeof v === "string" && (allowed as readonly string[]).includes(v)) {
+          (policy as Record<string, unknown>)[k] = v;
+        } else {
+          errors.push(`${k} 必须是 ${allowed.join("/")} 之一`);
+        }
+      };
       bool("conservative", args.conservative);
-      num("softThreshold", args.softThreshold);
-      num("hardThreshold", args.hardThreshold);
-      num("emergencyThreshold", args.emergencyThreshold);
-      num("topicDistance", args.topicDistance);
-      num("maxChunkBeforeManage", args.maxChunkBeforeManage);
-      str("userOverride", args.userOverride);
+      numRange("softThreshold", args.softThreshold, 0, 1);
+      numRange("hardThreshold", args.hardThreshold, 0, 1);
+      numRange("emergencyThreshold", args.emergencyThreshold, 0, 1);
+      numRange("topicDistance", args.topicDistance, 0, 20);
+      numRange("maxChunkBeforeManage", args.maxChunkBeforeManage, 100, 100_000);
+      strEnum("userOverride", args.userOverride, USER_OVERRIDE_VALUES);
+      if (errors.length > 0) return textResult(`error: ${errors.join("；")}`);
       if (Object.keys(policy).length === 0) return textResult("error: 至少提供一个策略字段（如 conservative / emergencyThreshold）");
       engine.setManagementPolicy(policy);
       const p = engine.getManagementPolicy();

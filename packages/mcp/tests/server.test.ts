@@ -154,6 +154,38 @@ describe("MCP 工具调用（8 个工具）", () => {
     });
   });
 
+  it("context_set_policy 拒绝非法枚举/越界数值", async () => {
+    // 非法 userOverride 枚举
+    const badEnum: any = await handle({
+      jsonrpc: "2.0", id: 23, method: "tools/call",
+      params: { name: "context_set_policy", arguments: { userOverride: "banana" } },
+    });
+    expect(badEnum.result.content[0].text).toContain("error");
+    expect(badEnum.result.content[0].text).toContain("userOverride");
+
+    // 越界阈值（>1）
+    const badNum: any = await handle({
+      jsonrpc: "2.0", id: 24, method: "tools/call",
+      params: { name: "context_set_policy", arguments: { emergencyThreshold: 1.5 } },
+    });
+    expect(badNum.result.content[0].text).toContain("error");
+    expect(badNum.result.content[0].text).toContain("emergencyThreshold");
+
+    // 合法值仍生效
+    const ok: any = await handle({
+      jsonrpc: "2.0", id: 25, method: "tools/call",
+      params: { name: "context_set_policy", arguments: { userOverride: "aggressive" } },
+    });
+    expect(ok.result.content[0].text).toContain("策略已更新");
+    expect(ok.result.content[0].text).toContain("userOverride=aggressive");
+
+    // 还原
+    await handle({
+      jsonrpc: "2.0", id: 26, method: "tools/call",
+      params: { name: "context_set_policy", arguments: { userOverride: "auto" } },
+    });
+  });
+
   it("context_stats 返回精简状态（含磁盘/LLM/emergency）", async () => {
     await handle({
       jsonrpc: "2.0", id: 30, method: "tools/call",

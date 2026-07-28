@@ -2181,12 +2181,81 @@ export class ContextManager {
   }
 
   /**
-   * 更新 autoManage 中的容量强制逻辑。
-   * 在每步 autoManage 末尾检查：如果 needsInteraction，生成告警 observation。
+   * 容量兜底强制驱逐：当窗口持续超过 CAPACITY_ENFORCE_THRESHOLD（needsInteraction），
+   * 且 autoManage 各压缩/降级路径仍无法把占用压下来时，强制驱逐最冷、最低相关度的
+   * 非保护、非固定（user/ai pin）条目，直到占用回到安全水位（maxWindow * 0.9）。
+   * 每步幂等：一旦低于目标即不再驱逐。驱逐前保全 originalContent + ContentStore，
+   * 可经 recall/expand 恢复（与 summarizeAndCapsule / downgradeColdestL3ToL4 一致）。
+   */
+  private forceEvictToCapacity(): number {
+    const stats = this.getStats();
+    const targetTokens = Math.floor(this.maxWindow * 0.9);
+    if (stats.totalTokens <= targetTokens) return 0;
+
+    const candidates = this.entries
+      .filter((e) => {
+        if (e.evicted || e.protectedBy) return false;
+        const p = this.getPlacement(e.id);
+        if (p && p.target === "L2_working" && p.source !== "system") return false; // 固定（user/ai pin）条目不动
+        return true;
+      })
+      // 最冷（最低相关度）优先；相关度相同时保持已压缩（可恢复）条目优先驱逐
+      .sort((a, b) => {
+        if (a.taskRelevance !== b.taskRelevance) return a.taskRelevance - b.taskRelevance;
+        const at = a.compressedAt ?? Number.MAX_SAFE_INTEGER;
+        const bt = b.compressedAt ?? Number.MAX_SAFE_INTEGER;
+        return at - bt;
+      });
+
+    let evicted = 0;
+    let total = stats.totalTokens;
+    for (const e of candidates) {
+      if (total <= targetTokens) break;
+      const idx = this.entries.findIndex((entry) => entry.id === e.id);
+      if (idx < 0) continue;
+      const cur = this.entries[idx]!;
+      if (cur.originalContent === undefined) {
+        const original = cur.content;
+        this.store
+          .save({
+            entryId: cur.id,
+            originalContent: original,
+            originalTokenCount: cur.tokenCount,
+            savedAt: Date.now(),
+            reason: "evict",
+            source: cur.source,
+            sourceType: cur.sourceType,
+            conversationId: cur.conversationId,
+          })
+          .catch((err) => this.logger.warn(`forceEvict save failed: ${String(err)}`));
+      }
+      this.entries[idx] = {
+        ...cur,
+        evicted: true,
+        evictedAt: Date.now(),
+        externalRef: `ext://${cur.id}`,
+      };
+      total -= cur.tokenCount;
+      evicted++;
+    }
+
+    if (evicted > 0) {
+      this.logger.debug(
+        `forceEvictToCapacity: 强制驱逐 ${evicted} 条，占用回到 ${Math.round((total / this.maxWindow) * 100)}%`,
+      );
+    }
+    return evicted;
+  }
+
+  /**
+   * autoManage 末尾的容量兜底：先尝试强制驱逐把占用压回安全水位，
+   * 再发告警 observation 说明情况与剩余建议。
    */
   private enforceCapacity(): void {
     const status = this.getCapacityStatus();
     if (!status.needsInteraction || !status.alert) return;
+
+    const evicted = this.forceEvictToCapacity();
 
     const lines = [
       `⚠️ 上下文接近上限 (${status.alert.usePercent}%，持续 ${this.capacityExceededSteps} 步)。`,
@@ -2198,7 +2267,13 @@ export class ContextManager {
         lines.push(`  - ${c.entryId} (${c.tokens} tokens, pinned by ${c.pinnedBy})`);
       }
     }
-    lines.push(`建议：${status.alert.suggestion === "evict_ai_pins" ? "解除 AI pin 的条目" : "概括大条目为胶囊"}`);
+    if (evicted > 0) {
+      lines.push(
+        `兜底强制驱逐 ${evicted} 条最冷/低相关度条目（原文已落盘 ContentStore，可经 recall/expand 恢复），占用回到 ${this.getStats().usePercent}%`,
+      );
+    } else {
+      lines.push(`建议：${status.alert.suggestion === "evict_ai_pins" ? "解除 AI pin 的条目" : "概括大条目为胶囊"}`);
+    }
 
     this.appendObservation(lines.join("\n"), {
       source: "capacity:alert",
