@@ -1,7 +1,7 @@
 {
   "name": "@structfocus/context",
   "version": "0.2.0",
-  "description": "StructFocus 上下文引擎 — 四层冷热架构 / 胶囊召回 / LongContextEngine",
+  "description": "StructFocus 上下文引擎 — 四层冷热架构 / 胶囊召回 / LongContextEngine（LLM 长上下文注意力管理）",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,7 +13,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -b",
@@ -22,6 +23,34 @@
     "clean": "rimraf dist *.tsbuildinfo",
     "prepublishOnly": "tsc -b"
   },
-  "dependencies": {},
-  "license": "Apache-2.0"
+  "keywords": [
+    "llm",
+    "context-window",
+    "long-context",
+    "memory",
+    "agent",
+    "agents",
+    "retrieval",
+    "compression",
+    "summarization",
+    "rag",
+    "context-management",
+    "structfocus",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/kongkongpq/struct-focus.git"
+  },
+  "bugs": {
+    "url": "https://gitee.com/kongkongpq/struct-focus/issues"
+  },
+  "homepage": "https://gitee.com/kongkongpq/struct-focus#readme",
+  "publishConfig": {
+    "access": "public"
+  }
 }

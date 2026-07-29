@@ -6,20 +6,48 @@
   "engines": {
     "node": ">=22.6.0"
   },
-  "description": "StructFocus 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议）",
+  "description": "StructFocus 上下文引擎的 MCP Server（stdio 传输，零依赖实现 MCP 协议；让任意 MCP 宿主三行接入长上下文管理）",
   "bin": {
     "struct-context-mcp": "./bin/struct-context-mcp.js"
   },
   "files": [
+    "bin",
     "src",
-    "bin"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "start": "node --experimental-strip-types ./src/index.ts"
+    "start": "node --experimental-strip-types ./src/index.ts",
+    "prepublishOnly": "tsc --noEmit"
   },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "context-window",
+    "memory",
+    "agent",
+    "claude",
+    "cursor",
+    "cline",
+    "context-management",
+    "structfocus",
+    "stdio"
+  ],
   "dependencies": {
     "@structfocus/context": "^0.2.0"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/kongkongpq/struct-focus.git"
+  },
+  "bugs": {
+    "url": "https://gitee.com/kongkongpq/struct-focus/issues"
+  },
+  "homepage": "https://gitee.com/kongkongpq/struct-focus#readme",
+  "publishConfig": {
+    "access": "public"
+  }
 }
