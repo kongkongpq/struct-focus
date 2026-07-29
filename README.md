@@ -4,7 +4,8 @@
 >
 > LLM context attention management. ≈ the context half of MemGPT/Letta, minus the agent framework, plus community-standard benchmarks.
 
-![CI](https://github.com/kongkongpq/struct-focus/actions/workflows/ci.yml/badge.svg)
+![Gitee Star](https://gitee.com/kongkongpq/struct-focus/badge/star.svg)
+![Gitee Fork](https://gitee.com/kongkongpq/struct-focus/badge/fork.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 ![Ask Questions](https://img.shields.io/badge/questions-welcome-blue.svg)
@@ -134,9 +135,9 @@ node --experimental-strip-types ./src/index.ts
 
 **We welcome issues and pull requests.** StructFocus is built in the open — your bug reports, fixes, benchmarks, and integrations all make FIFO-truncation-replacement better for everyone.
 
-- 🐛 **Found a bug or a case where FIFO beats us?** [Open an issue](https://github.com/kongkongpq/struct-focus/issues) — it's the most useful contribution.
+- 🐛 **Found a bug or a case where FIFO beats us?** [Open an issue](https://gitee.com/kongkongpq/struct-focus/issues) — it's the most useful contribution.
 - 🔧 **Want to contribute code?** Fork, branch from `main`, and open a PR. See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, test conventions, and the PR checklist.
-- 💬 **Questions?** Use [GitHub Discussions](https://github.com/kongkongpq/struct-focus/discussions) or a plain issue.
+- 💬 **Questions?** Use [Gitee Issues](https://gitee.com/kongkongpq/struct-focus/issues) or a plain issue.
 - 🔒 **Security issue?** Please report privately per [SECURITY.md](./SECURITY.md), not as a public issue.
 
 Pushing to `main` or opening a PR triggers CI (`typecheck → lint → test`) — keep it green.
@@ -308,9 +309,9 @@ node --experimental-strip-types ./src/index.ts
 
 **我们欢迎 Issue 与 Pull Request。** StructFocus 是开放共建的项目——你的 Bug 报告、修复、基准数据、集成方案，都能让「替代 FIFO 截断」做得更好。
 
-- 🐛 **发现 Bug 或 FIFO 反超的场景？** [开 issue](https://github.com/kongkongpq/struct-focus/issues)——这是最有价值的贡献。
+- 🐛 **发现 Bug 或 FIFO 反超的场景？** [开 issue](https://gitee.com/kongkongpq/struct-focus/issues)——这是最有价值的贡献。
 - 🔧 **想贡献代码？** Fork 后从 `main` 切分支开 PR。参见 [CONTRIBUTING.md](./CONTRIBUTING.md) 的本地搭建、测试规范与 PR 清单。
-- 💬 **有疑问？** 用 [GitHub Discussions](https://github.com/kongkongpq/struct-focus/discussions) 或普通 issue。
+- 💬 **有疑问？** 用 [Gitee Issues](https://gitee.com/kongkongpq/struct-focus/issues) 或普通 issue。
 - 🔒 **安全问题？** 请按 [SECURITY.md](./SECURITY.md) 私下举报，不要开公开 issue。
 
 推到 `main` 或开 PR 都会触发 CI（`typecheck → lint → test`），请保持通过。

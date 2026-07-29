@@ -10,7 +10,7 @@ By participating in this project you agree to abide by our [Code of Conduct](./C
 
 ```bash
 # Prerequisites: Node.js >= 22.6 (MCP Server runs TS via --experimental-strip-types), pnpm >= 9
-git clone https://github.com/kongkongpq/struct-focus.git
+git clone https://gitee.com/kongkongpq/struct-focus.git
 cd struct-focus
 pnpm install
 pnpm build      # tsc -b (context → dist)
@@ -21,7 +21,7 @@ pnpm test       # vitest run (the contract — run before sharing anything)
 
 ## Continuous Integration
 
-Pushing to `main` (or opening a PR against `main`) triggers GitHub Actions: `pnpm typecheck → lint → test`. **CI must be green before merge.** A red CI means the PR is not ready — please fix locally and push again.
+Pushing to `main` (or opening a PR against `main`) triggers CI (Gitee Go): `pnpm typecheck → lint → test`. **CI must be green before merge.** A red CI means the PR is not ready — please fix locally and push again.
 
 ```bash
 # Run the same checks CI runs, locally:
